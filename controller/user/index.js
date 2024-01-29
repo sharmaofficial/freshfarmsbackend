@@ -52,9 +52,24 @@ exports.del = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
     try {
-        const response = await userSchema.findOneAndUpdate({ id: req.params.id }, { ...req.body });
+        const userId = req.userId;
+        const user = await userSchema.find({ _id: userId });
+        const data = user[0].data;
+        let payload = {...data, ...req.body};
+        console.log("payload", payload);
+
+        const update = {
+            $set: {
+                'data': payload,
+            },
+        };
+    
+        const options = {
+            new: true,
+        };
+        const response = await userSchema.findOneAndUpdate({ _id: userId }, update, options);
         if (response) {
-            res.send({ status: 1, data: [], message: 'User updated' })
+            res.send({ status: 1, data: response, message: 'User updated' })
         } else {
             res.send({ status: 0, message: 'Userv not updated' })
         }

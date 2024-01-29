@@ -15,7 +15,7 @@ router.post('/deleteAddress', deleteAddress);
 router.post('/getProductsList', getProducts);
 router.post('/getProduct', getProduct);
 router.post('/delete/:id', del);
-router.post('/update/:id', update);
+router.post('/update', update);
 router.post('/login', login);
 router.post('/register', register);
 router.post('/upload', upload);
