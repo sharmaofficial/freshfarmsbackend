@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 var admin = require("firebase-admin");
 
 var serviceAccount = require("../../utils/serviceAccountKey.json");
+const orders = require('../../modal/order');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -169,7 +170,7 @@ exports.addAddress = async (req, res, next) => {
                 req,
                 async (addresses) => {console.log("addresses to add", addresses);
                     const condition = {
-                        '_id': req.body.id,
+                        '_id': req.userId,
                     };
                     const update = {
                         $set: {
@@ -497,6 +498,26 @@ exports.updatePassword = async (req, res, next) => {
       user.data.password = hashedPassword
       await user.save();
       res.json({ message: 'Passord Reset Successfull', status: 1, data: user });
+    } catch (error) {
+      console.log(error);
+      res.json({ status: 0, data: null, message: error });
+    }
+};
+
+exports.myOrders = async (req, res, next) => {
+    const userId = req.userId;
+    console.log("req.userId", req.userId);
+    try {
+      const user = await userSchema.findOne({ _id: req.userId });
+      if (!user) {
+        res.json({ status: 0, data: null, message: 'Invalid email or password' });
+      }
+      const ordersList = await orders.find({userId: user.data.id});
+      if(ordersList){
+        res.json({ status: 1, data: ordersList, message: 'Order fetched' });
+      }else{
+        res.json({ status: 0, data: null, message: 'Error while fetching orders' });
+      }
     } catch (error) {
       console.log(error);
       res.json({ status: 0, data: null, message: error });

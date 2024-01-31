@@ -1,6 +1,6 @@
 const express = require('express');
 var router = express.Router();
-var {list, details} = require('../../controller/user');
+var {list, details, myOrders} = require('../../controller/user');
 const { placeList } = require('../../controller/place');
 const { getOrders } = require('../../controller/order');
 const { getCategories } = require('../../controller/category');

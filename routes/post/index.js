@@ -1,7 +1,7 @@
 const express = require('express');
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
 var router = express.Router();
-var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword} = require('../../controller/user');
+var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders} = require('../../controller/user');
 const { getProducts, getProduct } = require('../../controller/product');
 const { createOrder, verifyOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
@@ -38,9 +38,7 @@ router.post('/add-place', addPlace);
 router.post('/update-place/:id', updatePlace);
 router.post('/uploadImage', uploadImage);
 router.post('/getQuantity', getLatestQuantityFromPackage);
-
 router.delete('/delete-place/:id', deletePlace);
-
-
+router.post('/myOrders', myOrders);
 
 module.exports = router;

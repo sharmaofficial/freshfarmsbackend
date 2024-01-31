@@ -33,7 +33,7 @@ exports.createOrder = (req, res, next) => {
                 order_amount: req.body.totalAmout,
                 order_currency: "INR",
                 customer_details: {
-                    customer_id: req.body.userId,
+                    customer_id: req.userId,
                     customer_phone: req.body?.address?.phoneNumber || "",
                     customer_name: req.body?.address?.name || ""
                 }
