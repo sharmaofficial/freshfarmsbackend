@@ -27,7 +27,9 @@ let userSchema = new mongoose.Schema({
         mobile: String,
         name: String,
         password: String,
-        id: String
+        id: String,
+        profilePicture: String,
+        otp: Number
     },
 });
 
