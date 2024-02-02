@@ -1,21 +1,11 @@
 var userSchema = require('../../modal/user');
-const { getUniqueId } = require('../../utils');
+const { getUniqueId, adminInstance } = require('../../utils');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-
-var admin = require("firebase-admin");
-
-var serviceAccount = require("../../utils/serviceAccountKey.json");
 const orders = require('../../modal/order');
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://fresh-farms-2bbdf-default-rtdb.asia-southeast1.firebasedatabase.app",
-  storageBucket: process.env.BUCKET_URL
-});
-
-let bucket = admin.storage().bucket();
+let bucket = adminInstance.storage().bucket();
 
 exports.list = (req, res, next) => {
     userSchema.find({}, (err, result) => {
@@ -338,13 +328,24 @@ exports.deleteAddress = async (req, res) => {
 
 exports.login = async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, fcmToken } = req.body;
         const user = await userSchema.findOne({ 'data.email': email });
         if (user && await bcrypt.compare(password, user.data.password)) {
             const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT', { expiresIn: '1h' });
-            let userData = {data:{...user.data, _id: user._id}};
+            const otp = generateOTP();
+            sendOTPEmail('', otp);
+            const update = {
+                $set: {
+                    'data': {...user.data, fcmToken: fcmToken, otp: otp},
+                },
+            };
+            const options = {
+                new: true,
+            };
+            await userSchema.findOneAndUpdate({_id: user._id}, update, options)
+            let userData = {data:{...user.data, _id: user._id, fcmToken}};
             delete userData.data.password;
-            res.json({ status: 1, data: { token, userData }, message: 'Login successful' });
+            res.json({ status: 1, data: { token, userData }, message: 'OTP sent to email successfully' });
         } else {
             res.json({ status: 0, token: null, message: 'Invalid email or password' });
         }
@@ -356,24 +357,52 @@ exports.login = async (req, res, next) => {
 
 exports.register = async (req, res, next) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, name, fcmToken, verifyOtp } = req.body;
         const existingUser = await userSchema.findOne({ 'data.email': email });
         if (existingUser) {
-            res.send({ message: 'User already exist', data: savedUser, status: 0 });
+            if(verifyOtp){
+                if(existingUser.data.otp === verifyOtp){
+                    existingUser.data.otp = -1;
+                    existingUser.data.isVerified = true;
+                    await existingUser.save();
+                    res.json({ message: 'Registration successful', status: 1, data: null });
+                  }else{
+                    res.json({ message: 'Wrong OTP, please enter correct OTP sent on mail', status: 0, data: null });
+                  }
+            }else{
+                res.send({ message: 'User already exist', data: null, status: 0 });
+            }
+        }else{
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const newUser = new userSchema({
+                data: {
+                    email,
+                    password: hashedPassword,
+                    name: name,
+                    addresses: [],
+                    mobile: "",
+                    id: getUniqueId(),
+                    isVerified: false
+                },
+            });
+            const savedUser = await newUser.save();
+            const token = jwt.sign({ userId: savedUser._id }, 'freshfarmsJWT', { expiresIn: '1h' });
+            const otp = generateOTP();
+            sendOTPEmail('', otp);
+            const update = {
+                $set: {
+                    'data': {...savedUser.data, fcmToken: fcmToken, otp: otp},
+                },
+            };
+            const options = {
+                new: true,
+            };
+            await userSchema.findOneAndUpdate({_id: savedUser._id}, update, options)
+            let userData = {data:{...savedUser.data, _id: savedUser._id, fcmToken: fcmToken}};
+            delete userData.data.password;
+            res.send({ data: {userData, token}, message: 'OTP sent on email successfully', status: 1 });
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new userSchema({
-            data: {
-                email,
-                password: hashedPassword,
-                name: name,
-                addresses: [],
-                mobile: "",
-                id: getUniqueId()
-            },
-        });
-        const savedUser = await newUser.save();
-        res.send({ data: savedUser, message: 'Registration successful', status: 1 });
+        
     } catch (error) {
         res.send({ status: 0, data: null, message: error.message });
     }
@@ -431,38 +460,6 @@ exports.forgotPassword = async (req, res, next) => {
       console.log(error);
       res.json({ status: 0, data: null, message: 'Internal Server Error' });
     }
-
-    function generateOTP(){
-        return Math.floor(100000 + Math.random() * 900000).toString();
-    };
-
-    function sendOTPEmail(email, otp){
-        const transporter = nodemailer.createTransport({
-            host: "gmail.com",
-            service: "gmail",
-            port: 465,
-            secure: true,
-            auth: {
-                user: `sharma.official12@gmail.com`,
-                pass: `avufxgfcowygqxpx`,
-            },
-        });
-      
-        const mailOptions = {
-          from: process.env.gmailUser,
-          to: `riyush13@gmail.com`,
-          subject: 'Password Reset OTP',
-          text: `Your OTP for password reset is: ${otp}`,
-        };
-      
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.log(error);
-          } else {
-            console.log('Email sent: ' + info.response);
-          }
-        });
-    };
 };
 
 exports.verifyOTP = async (req, res, next) => {
@@ -512,7 +509,7 @@ exports.myOrders = async (req, res, next) => {
       if (!user) {
         res.json({ status: 0, data: null, message: 'Invalid email or password' });
       }
-      const ordersList = await orders.find({userId: user.data.id});
+      const ordersList = await orders.find({userId: req.userId});
       if(ordersList){
         res.json({ status: 1, data: ordersList, message: 'Order fetched' });
       }else{
@@ -522,5 +519,37 @@ exports.myOrders = async (req, res, next) => {
       console.log(error);
       res.json({ status: 0, data: null, message: error });
     }
+};
+
+function sendOTPEmail(email, otp){
+    const transporter = nodemailer.createTransport({
+        host: "gmail.com",
+        service: "gmail",
+        port: 465,
+        secure: true,
+        auth: {
+            user: `sharma.official12@gmail.com`,
+            pass: `avufxgfcowygqxpx`,
+        },
+    });
+  
+    const mailOptions = {
+      from: process.env.gmailUser,
+      to: `riyush13@gmail.com`,
+      subject: 'Password Reset OTP',
+      text: `Your OTP for password reset is: ${otp}`,
+    };
+  
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    });
+};
+
+function generateOTP(){
+    return Math.floor(100000 + Math.random() * 900000).toString();
 };
 

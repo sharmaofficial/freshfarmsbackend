@@ -1,7 +1,8 @@
 const inventory = require("../../modal/inventory")
 const inventoryLog = require("../../modal/inventoryLog")
-const ordersSchema = require("../../modal/order")
-const { getUniqueId } = require("../../utils");
+const ordersSchema = require("../../modal/order");
+const userSchema = require("../../modal/user");
+const { getUniqueId,adminInstance } = require("../../utils");
 
 const { Cashfree } = require("cashfree-pg");
 
@@ -21,8 +22,9 @@ exports.createOrder = (req, res, next) => {
     let payload = {
         ...req.body,
         orderId: orderId,
-        paymentDetails: {}, 
-        isPaid: false
+        paymentDetails: {},
+        isPaid: false,
+        orderStatus: 'Processing'
     }
     ordersSchema.create({...payload},(err, result)=>{
         if(err)throw err
@@ -74,7 +76,6 @@ exports.createOrder = (req, res, next) => {
 exports.verifyOrder = (req, res, next) => {
     Cashfree.PGFetchOrder("2022-09-01", req.body.orderId).then(async (response) => {
         let orderId = req.body.orderId
-        console.log("response", response.data);
         if(response.data.order_status === 'PAID'){
             const condition = {
                 'orderId': orderId,
@@ -86,19 +87,19 @@ exports.verifyOrder = (req, res, next) => {
                 },
             };
             await ordersSchema.findOneAndUpdate(condition, update, { new: true });
-            updateInventory(orderId, res, (error) => {
+            updateInventory(orderId, res, req, (error) => {
                 res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
             });
         }else{
             res.send({status: 1, message:'Orders payment pending', data: response.data});
         }
     }).catch((error) => {
-        console.error('Error:', error.response.data.message);
+        console.error('Error:', error);
         res.send({status: 0, message:'Error while verifying order payment', data: null});
     });
 }
 
-const updateInventory = async(orderId, res, errorCallback) => {
+const updateInventory = async(orderId, res, req, errorCallback) => {
     let orderDetails;
     try {
         orderDetails = await ordersSchema.find({orderId: orderId});
@@ -114,7 +115,18 @@ const updateInventory = async(orderId, res, errorCallback) => {
                         updateStock,
                         item.packageType.id,
                         () => {
-                            updateInvetoryLog(orderId,() => {
+                            updateInvetoryLog(orderId,async () => {
+                                const user = await userSchema.findOne({_id: req.userId});
+                                if(user){
+                                    await adminInstance.messaging().send({
+                                        data: {
+                                          title: `Order Placed Successfully !`,
+                                          body: `Order is placed and in processing, hang tight we will deliver it soon !
+                                                \n Your Order id is: ${orderId}`,
+                                        },
+                                        token: user.data.fcmToken,
+                                      });
+                                }
                                 res.send({status: 1, message:'Orders placed successfully', data: orderId})
                             })
                         },

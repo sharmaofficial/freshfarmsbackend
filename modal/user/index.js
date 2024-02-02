@@ -29,7 +29,9 @@ let userSchema = new mongoose.Schema({
         password: String,
         id: String,
         profilePicture: String,
-        otp: Number
+        otp: Number,
+        fcmToken: String,
+        isVerified: Boolean
     },
 });
 

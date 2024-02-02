@@ -46,6 +46,16 @@ let ordersSchema = new mongoose.Schema({
         required: true,
         unique: false,
     },
+    deliveryDetails:{
+        type: mongoose.Schema.Types.Mixed,
+        required: false,
+        unique: false,
+    },
+    orderStatus:{
+        type: String,
+        required: true,
+        unique: false,
+    }
 });
 
 const orders = mongoose.model('orders', ordersSchema, 'orders');
