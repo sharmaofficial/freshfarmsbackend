@@ -311,10 +311,6 @@ exports.deleteAddress = async (req, res) => {
         );
         await updatedUser.save();
         // Check if addresses array is empty, assign to empty array
-        if (updatedUser && updatedUser.data.addresses.length === 0) {
-            updatedUser.data.addresses = "";
-        }
-
         if (updatedUser) {
             res.json({ status: 1, data: updatedUser, message: 'Address deleted successfully' });
         } else {
@@ -331,7 +327,7 @@ exports.login = async (req, res, next) => {
         const { email, password, fcmToken } = req.body;
         const user = await userSchema.findOne({ 'data.email': email });
         if (user && await bcrypt.compare(password, user.data.password)) {
-            const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT', { expiresIn: '1h' });
+            const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT');
             const otp = generateOTP();
             sendOTPEmail('', otp);
             const update = {
@@ -386,7 +382,7 @@ exports.register = async (req, res, next) => {
                 },
             });
             const savedUser = await newUser.save();
-            const token = jwt.sign({ userId: savedUser._id }, 'freshfarmsJWT', { expiresIn: '1h' });
+            const token = jwt.sign({ userId: savedUser._id }, 'freshfarmsJWT');
             const otp = generateOTP();
             sendOTPEmail('', otp);
             const update = {
@@ -469,10 +465,11 @@ exports.verifyOTP = async (req, res, next) => {
       if (!user) {
         res.json({ status: 0, token: null, message: 'Invalid email or password' });
       }
-      console.log("user.data.otp", user.data.otp);
-      console.log("OTP", OTP);
       if(user.data.otp === OTP){
         user.data.otp = -1;
+        if(!user.data.isVerified){
+            user.data.isVerified = true;
+        }
         await user.save();
         res.json({ message: 'OTP verified successfully', status: 1, data: null });
       }else{

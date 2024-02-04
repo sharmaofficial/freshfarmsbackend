@@ -6,8 +6,8 @@ const { getUniqueId,adminInstance } = require("../../utils");
 
 const { Cashfree } = require("cashfree-pg");
 
-Cashfree.XClientId = "TEST10024297903d03c5af974412c14b79242001";
-Cashfree.XClientSecret = "TESTbcecfa7af6fd8ac16555ad7deb88c0d5d854d642";
+Cashfree.XClientId = process.env.XClientId;
+Cashfree.XClientSecret = process.env.XClientSecret;
 Cashfree.XEnvironment = Cashfree.Environment.SANDBOX;
 
 exports.getOrders = (req, res, next) => {
@@ -43,7 +43,17 @@ exports.createOrder = (req, res, next) => {
             (response) => {
                 res.send({status: 1, message:'Orders Created', data: response});
             },
-            () => {
+            async () => {
+                const condition = {
+                    'orderId': orderId, // Match the package with a specific id
+                };
+              
+                const update = {
+                    $set: {
+                        'orderStatus': "Terminated due to payment failure", // Use $ to identify the matched array element
+                    },
+                };
+                await ordersSchema.findOneAndUpdate(condition, update, {new: true})
                 res.send({status: 0, message:'Error while placing order', data: null});
             })
         // updateInventory(payload.orderId)
@@ -83,7 +93,7 @@ exports.verifyOrder = (req, res, next) => {
             const update = {
                 $set: {
                     'isPaid': true,
-                    'paymentDetails': {...response.data}
+                    'paymentDetails': {...response.data},
                 },
             };
             await ordersSchema.findOneAndUpdate(condition, update, { new: true });
@@ -91,6 +101,16 @@ exports.verifyOrder = (req, res, next) => {
                 res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
             });
         }else{
+            const condition = {
+                'orderId': orderId,
+            };
+            const update = {
+                $set: {
+                    'isPaid': false,
+                    'orderStatus': "Terminated due to payment failure",
+                },
+            };
+            await ordersSchema.findOneAndUpdate(condition, update, { new: true });
             res.send({status: 1, message:'Orders payment pending', data: response.data});
         }
     }).catch((error) => {
