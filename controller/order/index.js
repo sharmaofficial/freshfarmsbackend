@@ -137,7 +137,7 @@ const updateInventory = async(orderId, res, req, errorCallback) => {
                         () => {
                             updateInvetoryLog(orderId,async () => {
                                 const user = await userSchema.findOne({_id: req.userId});
-                                if(user){
+                                if(user.data.fcmToken){
                                     await adminInstance.messaging().send({
                                         data: {
                                           title: `Order Placed Successfully !`,

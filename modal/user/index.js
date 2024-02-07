@@ -30,7 +30,7 @@ let userSchema = new mongoose.Schema({
         id: String,
         profilePicture: String,
         otp: Number,
-        fcmToken: String,
+        fcmToken: {type: String, required: false},
         isVerified: Boolean
     },
 });
