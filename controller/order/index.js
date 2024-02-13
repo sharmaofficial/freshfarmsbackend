@@ -3,6 +3,7 @@ const inventoryLog = require("../../modal/inventoryLog")
 const ordersSchema = require("../../modal/order");
 const userSchema = require("../../modal/user");
 const { getUniqueId,adminInstance } = require("../../utils");
+const crypto = require('crypto');
 
 const { Cashfree } = require("cashfree-pg");
 
@@ -229,4 +230,27 @@ const updateInvetoryLog = (orderId, callback) => {
         throw error
     }
 
+}
+
+exports.verifyPaymentHook = (req, res, next) => {
+    console.log(req.rawBody);
+    const ts = req.headers["x-webhook-timestamp"]
+    const signature = req.headers["x-webhook-signature"]  
+    const currTs = Math.floor(new Date().getTime() / 1000)
+  	if(currTs - ts > 30000){
+    	res.send("Failed")
+  	}  
+    const genSignature = verify(ts, req.rawBody)
+    if(signature === genSignature){
+        res.send('OK')
+    } else {
+        res.send("failed")
+    } 
+}
+
+function verify(ts, rawBody){
+    const body = ts + rawBody
+    const secretKey = process.env.XClientSecret;
+    let genSignature = crypto.createHmac('sha256',secretKey).update(body).digest("base64");
+    return genSignature
 }

@@ -57,15 +57,12 @@ exports.del = async (req, res, next) => {
 exports.update = async (req, res, next) => {
     try {
         const userId = req.userId;
-        const user = await userSchema.find({ _id: userId });
-        const data = user[0].data;
-        console.log("req.file", req.body);
+        const user = await userSchema.findOne({ _id: userId });
+        const data = user.data;
         if(req.body.image){
             uploadImageToFirebaseAndReturnURL(req,
                 async (url) => {
                     let payload = {...data, ...req.body, profilePicture: url};
-                    console.log("payload in if", payload);
-            
                     const update = {
                         $set: {
                             'data': payload,
@@ -86,8 +83,6 @@ exports.update = async (req, res, next) => {
             )
         }else{
             let payload = {...data, ...req.body};
-            console.log("payload in else", payload);
-    
             const update = {
                 $set: {
                     'data': payload,
@@ -327,21 +322,25 @@ exports.login = async (req, res, next) => {
         const { email, password, fcmToken } = req.body;
         const user = await userSchema.findOne({ 'data.email': email });
         if (user && await bcrypt.compare(password, user.data.password)) {
-            const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT');
-            const otp = generateOTP();
-            sendOTPEmail('', otp);
-            const update = {
-                $set: {
-                    'data': {...user.data, fcmToken: fcmToken, otp: otp},
-                },
-            };
-            const options = {
-                new: true,
-            };
-            await userSchema.findOneAndUpdate({_id: user._id}, update, options)
-            let userData = {data:{...user.data, _id: user._id, fcmToken}};
-            delete userData.data.password;
-            res.json({ status: 1, data: { token, userData }, message: 'OTP sent to email successfully' });
+            if(user.data.isActive){
+                const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT');
+                const otp = generateOTP();
+                sendOTPEmail('', otp);
+                const update = {
+                    $set: {
+                        'data': {...user.data, fcmToken: fcmToken, otp: otp},
+                    },
+                };
+                const options = {
+                    new: true,
+                };
+                await userSchema.findOneAndUpdate({_id: user._id}, update, options)
+                let userData = {data:{...user.data, _id: user._id, fcmToken}};
+                delete userData.data.password;
+                res.json({ status: 1, data: { token: token, userData }, message: 'OTP sent to email successfully' });
+            }else{
+                res.json({ status: 1, data: null, message: 'Your account is inactive, please contact admin'});
+            }
         } else {
             res.json({ status: 0, token: null, message: 'Invalid email or password' });
         }
@@ -378,7 +377,9 @@ exports.register = async (req, res, next) => {
                     addresses: [],
                     mobile: "",
                     id: getUniqueId(),
-                    isVerified: false
+                    isVerified: false,
+                    isAdmin: false,
+                    isActive: true
                 },
             });
             const savedUser = await newUser.save();
@@ -469,6 +470,7 @@ exports.verifyOTP = async (req, res, next) => {
         user.data.otp = -1;
         if(!user.data.isVerified){
             user.data.isVerified = true;
+            user.data.isActive = true;
         }
         await user.save();
         res.json({ message: 'OTP verified successfully', status: 1, data: null });
@@ -515,6 +517,28 @@ exports.myOrders = async (req, res, next) => {
     } catch (error) {
       console.log(error);
       res.json({ status: 0, data: null, message: error });
+    }
+};
+
+exports.adminLogin = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        const user = await userSchema.findOne({ 'data.email': email });
+        if (user && await bcrypt.compare(password, user.data.password)) {
+            if(!user.data.isAdmin){
+                res.json({ status: 0, data: null, message: 'Please use these credentials to login via App, you are not an admin' });
+            }else{
+                const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT');
+                let userData = {data:{...user.data, _id: user._id}};
+                delete userData.data.password;
+                res.json({ status: 1, data: { token, userData }, message: 'Login successfully' });
+            }
+        } else {
+            res.json({ status: 0, token: null, message: 'Invalid email or password' });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        res.send({ status: 0, data: null, message: error.message });
     }
 };
 

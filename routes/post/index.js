@@ -1,9 +1,9 @@
 const express = require('express');
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
 var router = express.Router();
-var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders} = require('../../controller/user');
-const { getProducts, getProduct } = require('../../controller/product');
-const { createOrder, verifyOrder } = require('../../controller/order');
+var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin} = require('../../controller/user');
+const { getProducts, getProduct, addProduct, editProduct } = require('../../controller/product');
+const { createOrder, verifyOrder, verifyPaymentHook } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
 const multer = require('multer');
 
@@ -40,5 +40,11 @@ router.post('/uploadImage', uploadImage);
 router.post('/getQuantity', getLatestQuantityFromPackage);
 router.delete('/delete-place/:id', deletePlace);
 router.post('/myOrders', myOrders);
+router.post('/verifyPaymentHook', verifyPaymentHook);
+
+//admin
+router.post('/admin/login', adminLogin);
+router.post('/admin/addProduct', addProduct);
+router.post('/admin/editProduct', editProduct);
 
 module.exports = router;

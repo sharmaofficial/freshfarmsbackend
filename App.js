@@ -41,7 +41,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const excludePaths = ['/register', '/login'];
+const excludePaths = ['/register', '/login', '/admin/login', '/verifyPaymentHook'];
 app.use(verifyToken(excludePaths));
 app.use(Routes.getRouter, Routes.postRouter);
 

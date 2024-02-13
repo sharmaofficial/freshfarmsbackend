@@ -22,14 +22,9 @@ let productSchema = new mongoose.Schema({
         required: true,
         unique: false,
     },
-    id:{
-        type: Number,
-        required: true,
-        unique: false,
-    },
     images:{
         type: Array,
-        required: true,
+        required: false,
         unique: false,
     },
     isActive:{
@@ -37,20 +32,10 @@ let productSchema = new mongoose.Schema({
         required: true,
         unique: false,
     },
-    packaging_type:{
+    coverImage:{
         type: String,
-        require: true,
-        unique: false
-    },
-    packaging_weight:{
-        type: String,
-        require: true,
-        unique: false
-    },
-    price:{
-        type: Number,
-        require: true,
-        unique: false
+        required: true,
+        unique: false,
     }
 });
 const products = mongoose.model('products', productSchema, 'products');

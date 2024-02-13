@@ -31,7 +31,15 @@ let userSchema = new mongoose.Schema({
         profilePicture: String,
         otp: Number,
         fcmToken: {type: String, required: false},
-        isVerified: Boolean
+        isVerified: Boolean,
+        isAdmin: {
+            type: Boolean,
+            require: true
+        },
+        isActive: {
+            type: Boolean,
+            require: true
+        }
     },
 });
 
