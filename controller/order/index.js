@@ -18,6 +18,20 @@ exports.getOrders = (req, res, next) => {
     })
 }
 
+exports.getOrderStatus = async(req, res, next) => {
+    try {
+        const response = await ordersSchema.findOne({orderId: req.body.orderId});
+        console.log("response", response);
+        if(response){
+            res.send({status: 1, message:'', data: response})
+        }else{
+            res.send({status: 1, message:'Order not found', data: null})
+        }
+    } catch (error) {
+        res.send({status: 0, message:error.message, data: null})
+    }
+}
+
 exports.createOrder = (req, res, next) => {
     const orderId = getUniqueId();
     let payload = {
@@ -95,6 +109,7 @@ exports.verifyOrder = (req, res, next) => {
                 $set: {
                     'isPaid': true,
                     'paymentDetails': {...response.data},
+                    'orderStatus': response.data.order_status
                 },
             };
             await ordersSchema.findOneAndUpdate(condition, update, { new: true });
@@ -108,7 +123,8 @@ exports.verifyOrder = (req, res, next) => {
             const update = {
                 $set: {
                     'isPaid': false,
-                    'orderStatus': "Terminated due to payment failure",
+                    'orderStatus': response.data.order_status,
+                    'paymentDetails': {...response.data},
                 },
             };
             await ordersSchema.findOneAndUpdate(condition, update, { new: true });

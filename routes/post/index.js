@@ -3,7 +3,7 @@ const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../contr
 var router = express.Router();
 var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct } = require('../../controller/product');
-const { createOrder, verifyOrder, verifyPaymentHook } = require('../../controller/order');
+const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
 const multer = require('multer');
 
@@ -41,6 +41,7 @@ router.post('/getQuantity', getLatestQuantityFromPackage);
 router.delete('/delete-place/:id', deletePlace);
 router.post('/myOrders', myOrders);
 router.post('/verifyPaymentHook', verifyPaymentHook);
+router.post('/getOrderStatus', getOrderStatus);
 
 //admin
 router.post('/admin/login', adminLogin);

@@ -22,48 +22,54 @@ exports.getProduct = async(req, res, next) => {
     }else{
         let query = {id: req.body.id}
         let inventoryData = [];
-        let mergedInventoryItems = [];
         let packageTypeData = [];
         try {
             inventoryData = await inventorySchema.find({productId: req.body.id});
             packageTypeData = await packageTypeSchema.find({});
-        } catch (error) {
-            throw error
-        }
-        productSchema.find({...query},(error, result) => {
-            if(error) throw err
-            let mergedInventoryItems = [];
-            if(inventoryData.length){
-                mergedInventoryItems = inventoryData[0].packages.map(item => {
-                    if(item.qauntity > 1){
-                        let packageType = packageTypeData.find(item1 => {
-                            return item1.id === item.packageTypeId;
-                        });
-                        if (packageType) {
-                            return {
-                                ...item,
-                                packageType: {
+            const result = await productSchema.findOne({...query});
+            if(result){
+                let mergedInventoryItems = [];
+                if(inventoryData.length){
+                    mergedInventoryItems = inventoryData[0].packages.map(item => {
+                        if(item.qauntity > 1){
+                            let packageType = packageTypeData.find(item1 => {
+                                return item1.id === item.packageTypeId;
+                            });
+                            if (packageType) {
+                                return {
                                     ...item,
-                                    name: packageType.name,
-                                    id: packageType.id,
-                                    price: result[0].price * packageType.name,
-                                }
-                            };
+                                    packageType: {
+                                        ...item,
+                                        name: packageType.name,
+                                        id: packageType.id,
+                                        price: result.price * packageType.name,
+                                    }
+                                };
+                            }
+                        }else{
+                            return {}
                         }
-                    }else{
-                        return {}
-                    }
-                });
-            }
-            let nonNullValues = mergedInventoryItems.filter(item => {
-                if(Object.entries(item).length){
-                    return true
+                    });
                 }
-                return false
-            });
+                let nonNullValues = mergedInventoryItems.filter(item => {
+                    if(Object.entries(item).length){
+                        return true
+                    }
+                    return false
+                });  
+                let response = {productDetails: result, inventoryDetails: nonNullValues};
+                res.send({status: 1, message:'Product Details fetched', data: response})
+            }else{
+                res.send({status: 1, message: "Product not found", data: null})
+            }
+        } catch (error) {
+            res.send({status: 0, message: error.message, data: null})
+        }
+
+
+        productSchema.findOne({...query},(error, result) => {
+            if(error) throw err
             
-            let response = {productDetails: result[0], inventoryDetails: nonNullValues};
-            res.send({status: 1, message:'Product Details fetched', data: response})
         })
     }
 }

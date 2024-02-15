@@ -3,28 +3,15 @@ var mongoose = require('mongoose')
 var bodyParser = require('body-parser');
 const dotenv = require('dotenv')
 dotenv.config();
-// var url = "mongodb://localhost:27017/TI";
-const url = `mongodb+srv://sharmaofficial12:15Eaics7406@ecommerce.yp9eu3n.mongodb.net/freshfarms?retryWrites=true&w=majority`
+
+const url = `mongodb+srv://${process.env.dbUsername}:${process.env.dbPassword}${process.env.dbURL}?retryWrites=true&w=majority`
 const app = express();
-//multer initialize
-// const fileStorage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, path.join(__dirname, 'asset/image'))
-//   },
-//   filename: (req, file, cd) => {
-//     cd(null, Math.random().toString() + "-" + file.originalname);
-//   }
-// });
 
 const port = process.env.PORT || 8080
 var Routes = require('./routes');
-var db  = require('./database');
 const verifyToken = require('./utils/jwtMiddleware');
 app.get('/favicon.ico', (req, res) => res.status(204));
-
 app.use(bodyParser.json({limit: '50mb'}));
-// app.use(fileUpload({limits: { fileSize: 50 * 1024 * 1024 },useTempfiles: true,tempFileDir : '/tmp/', debug: true}));
-// app.use(multer({storage: fileStorage, fileFilter: fileFilter}).single('image'))
 app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -45,7 +32,6 @@ const excludePaths = ['/register', '/login', '/admin/login', '/verifyPaymentHook
 app.use(verifyToken(excludePaths));
 app.use(Routes.getRouter, Routes.postRouter);
 
-// app.use(db);
 mongoose.connect(url, 
   {
     useNewUrlParser: true, 
