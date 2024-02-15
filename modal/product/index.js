@@ -1,5 +1,4 @@
 var mongoose = require('mongoose');
-var JOI = require('joi')
 
 let productSchema = new mongoose.Schema({
     name:{
@@ -39,7 +38,7 @@ let productSchema = new mongoose.Schema({
     },
     price:{
         type: Number,
-        required: true,
+        required: false,
         unique: false,
     }
 });

@@ -322,6 +322,7 @@ exports.login = async (req, res, next) => {
         const { email, password, fcmToken } = req.body;
         const user = await userSchema.findOne({ 'data.email': email });
         if (user && await bcrypt.compare(password, user.data.password)) {
+            console.log(user);
             if(user.data.isActive){
                 const token = jwt.sign({ userId: user._id }, 'freshfarmsJWT');
                 const otp = generateOTP();

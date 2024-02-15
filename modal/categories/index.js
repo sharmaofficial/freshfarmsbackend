@@ -1,12 +1,7 @@
 var mongoose = require('mongoose');
 
 let categoriesSchema = new mongoose.Schema({
-    id:{
-        type: Number,
-        required: true,
-        unique: false,
-    },
-    image:{
+    coverImage:{
         type: String,
         required: true,
         unique: false,

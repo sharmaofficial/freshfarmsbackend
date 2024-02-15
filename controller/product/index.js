@@ -101,7 +101,7 @@ exports.addProduct = async(req, res, next) => {
 }
 
 exports.editProduct = async(req, res, next) => {
-    if(req.body.image){
+    if(req.body.coverImage){
         try {
             uploadImageToFirebaseAndReturnURL(
                 req,
@@ -133,7 +133,7 @@ exports.editProduct = async(req, res, next) => {
     }else{
         const update = {
             $set: {
-                ...req.body.data,
+                ...req.body,
             },
         };
         const options = {
@@ -150,8 +150,10 @@ exports.editProduct = async(req, res, next) => {
 
 function uploadImageToFirebaseAndReturnURL(req, successCallback, errorCallback){
     try {
-        const buffer = Buffer.from(req.body.image.base64, 'base64');
+        const buffer = Buffer.from(req.body.coverImage, 'base64');
         const fileName = `${req.body.name}_${req.userId}${getUniqueId()}` + getExtensionFromMimeType(req.body.image.type);
+        console.log("fileName", fileName);
+        console.log("buffer", buffer);
         const file = bucket.file(fileName);
         file.createWriteStream().end(buffer)
         file.getSignedUrl({ action: 'read', expires: '03-09-2055' })
