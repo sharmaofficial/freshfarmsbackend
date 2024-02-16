@@ -3,9 +3,10 @@ var router = express.Router();
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
 var {add, del, update, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct } = require('../../controller/product');
-const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus } = require('../../controller/order');
+const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
 const { addCategory, editCategory } = require('../../controller/category');
+const { addPackage, editPackage } = require('../../controller/packageType');
 
 router.post('/createOrder', createOrder);
 router.post('/verifyOrder', verifyOrder);
@@ -39,5 +40,9 @@ router.post('/admin/addProduct', addProduct);
 router.post('/admin/addCategory', addCategory);
 router.post('/admin/editCategory', editCategory);
 router.post('/admin/editProduct', editProduct);
+router.post('/admin/updateOrderStatus', updateOrderStatus);
+router.post('/admin/getOrder', getOrder);
+router.post('/admin/addPackage', addPackage);
+router.post('/admin/editPackage', editPackage);
 
 module.exports = router;

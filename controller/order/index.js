@@ -18,6 +18,26 @@ exports.getOrders = (req, res, next) => {
     })
 }
 
+exports.getOrder = async(req, res, next) => {
+    try {
+        const id = req.body.id;
+        if(id){
+            const response = await ordersSchema.findOne({_id: id});
+            if(response){
+                res.send({data: response, message: 'Order details fetched', status: 1});
+            }else{
+                res.send({data: null, message: 'Order not found', status: 1});
+            }
+        }else{
+            res.send({data: null, message: 'Please send order id', status: 1});
+        }
+
+    } catch (error) {
+        res.send({data: null, message: 'Error while fetching order details', status: 0});
+    }
+
+}
+
 exports.getOrderStatus = async(req, res, next) => {
     try {
         const response = await ordersSchema.findOne({orderId: req.body.orderId});
@@ -262,6 +282,33 @@ exports.verifyPaymentHook = (req, res, next) => {
     } else {
         res.send("failed")
     } 
+}
+
+exports.updateOrderStatus = async(req, res, next) => {
+    try {
+        const status = req.body.status;
+        const id = req.body.id;
+        if(id && status){
+            const condition = {
+                '_id': id,
+            };
+            const update = {
+                $set: {
+                    'orderStatus': status,
+                },
+            };
+            const response = await ordersSchema.findOneAndUpdate(condition, update, { new: true });
+            if (response) {
+                res.send({status: 1, message:'Orders updated successfully', data: null})
+            } else {
+                res.send({status: 0, message:'Error while updating order', data: null})
+            }
+        }else{
+            res.send({status: 1, message:'Please send all the required fields', data: null})
+        }
+    } catch (error) {
+        res.send({status: 0, message: `Error while updating order -${error}` , data: null})
+    }
 }
 
 function verify(ts, rawBody){
