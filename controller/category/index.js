@@ -10,6 +10,13 @@ exports.getCategories = (req, res, next) => {
     })
 };
 
+exports.getCategoriesForAdmin = (req, res, next) => {
+    categoriySchema.find({}, (err, result) => {
+        if (err) throw err
+        res.send({ status: 1, message: 'Categories list fetched', data: result })
+    })
+};
+
 exports.addCategory = async(req, res, next) => {
     let payload = {
         name: req.body.name,

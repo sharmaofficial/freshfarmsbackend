@@ -3,8 +3,9 @@ var router = express.Router();
 var {list, details, myOrders} = require('../../controller/user');
 const { placeList } = require('../../controller/place');
 const { getOrders } = require('../../controller/order');
-const { getCategories } = require('../../controller/category');
+const { getCategories, getCategoriesForAdmin } = require('../../controller/category');
 const { getPackages } = require('../../controller/packageType');
+const { getAllProductsForAdmin } = require('../../controller/product');
 
 router.get('/', list);
 router.get('/getCategories', getCategories);
@@ -14,6 +15,7 @@ router.get('/:id', details);
 
 //admin
 router.get('/admin/getPackages', getPackages);
-
+router.get('/admin/getCategories', getCategoriesForAdmin);
+router.get('/admin/getProducts', getAllProductsForAdmin);
 
 module.exports = router;

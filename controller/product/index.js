@@ -9,10 +9,23 @@ exports.getProducts = (req, res, next) => {
     if(!req.body.categoryId){
         res.send({status: 0, message:'Please send category id in api body', data: []})
     }else{
-        productSchema.find({...req.body},(error, result) => {
+        productSchema.find({...req.body, isActive: true},(error, result) => {
             if(error) throw err
             res.send({status: 1, message:'Product list fetched', data: result})
         })
+    }
+}
+
+exports.getAllProductsForAdmin = async(req, res, next) => {
+    try {
+        const response = await productSchema.find({});
+        if(response){
+            res.send({status: 1, message:'Product list fetched', data: response});
+        }else{
+            res.send({status: 0, message:'No Product Found', data: null});
+        }
+    } catch (error) {
+        res.send({status: 0, message:`Error in Product list fetching - ${error}`, data: null})
     }
 }
 

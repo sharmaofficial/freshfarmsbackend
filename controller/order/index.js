@@ -300,6 +300,16 @@ exports.updateOrderStatus = async(req, res, next) => {
             const response = await ordersSchema.findOneAndUpdate(condition, update, { new: true });
             if (response) {
                 res.send({status: 1, message:'Orders updated successfully', data: null})
+                    const user = await userSchema.findOne({_id: response.userId});
+                    if(user.data.fcmToken){
+                        await adminInstance.messaging().send({
+                            data: {
+                                title: `Order Status Changed !`,
+                                body: `Order is: ${status}`,
+                            },
+                            token: user.data.fcmToken,
+                        });
+                    }
             } else {
                 res.send({status: 0, message:'Error while updating order', data: null})
             }
