@@ -11,11 +11,17 @@ Cashfree.XClientId = process.env.XClientId;
 Cashfree.XClientSecret = process.env.XClientSecret;
 Cashfree.XEnvironment = Cashfree.Environment.SANDBOX;
 
-exports.getOrders = (req, res, next) => {
-    ordersSchema.find({},(err, result)=> {
-        if(err)throw err
-        res.send({status: 1, message:'Orders list fetched', data: result})
-    })
+exports.getOrders = async(req, res, next) => {
+    try {
+        const response = await ordersSchema.find({});
+        if(response){
+            res.send({status: 1, message:'Orders list fetched', data: response});
+        }else{
+            res.send({status: 0, message:'No order found', data: null});
+        }
+    } catch (error) {
+        res.send({status: 0, message: `Error while fetching orders - ${error}`, data: null});
+    }
 }
 
 exports.getOrder = async(req, res, next) => {

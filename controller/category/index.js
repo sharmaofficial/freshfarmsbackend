@@ -20,7 +20,7 @@ exports.getCategoriesForAdmin = (req, res, next) => {
 exports.addCategory = async(req, res, next) => {
     let payload = {
         name: req.body.name,
-        isActive: req.body.isActive,
+        isActive: false,
         coverImage: ""
     }
     try {
@@ -79,12 +79,11 @@ exports.editCategory = async(req, res, next) => {
         const options = {
             new: true,
         };
-        const response = await categoriySchema.findOneAndUpdate({_id: req.body.id}, update, options);
+        const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
         if(response){
-            res.send({status: 1, message: "Category Updated Successfully !!", data: response});
+            res.send({status: 1, message: `Category ${response.name} Updated Successfully !!`, data: response});
         }else{
-            console.log("error", error);
-            res.send({status: 0, message: "Category Updated Failed !!", data: null});
+            res.send({status: 0, message: "Category not found !!", data: null});
         }
     }
 }

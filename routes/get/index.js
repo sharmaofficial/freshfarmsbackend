@@ -6,6 +6,7 @@ const { getOrders } = require('../../controller/order');
 const { getCategories, getCategoriesForAdmin } = require('../../controller/category');
 const { getPackages } = require('../../controller/packageType');
 const { getAllProductsForAdmin } = require('../../controller/product');
+const { getInventoryLog } = require('../../controller/inventoryLog');
 
 router.get('/', list);
 router.get('/getCategories', getCategories);
@@ -15,6 +16,8 @@ router.get('/:id', details);
 
 //admin
 router.get('/admin/getPackages', getPackages);
+router.get('/admin/getOrders', getOrders);
+router.get('/admin/getInventoryLog', getInventoryLog);
 router.get('/admin/getCategories', getCategoriesForAdmin);
 router.get('/admin/getProducts', getAllProductsForAdmin);
 
