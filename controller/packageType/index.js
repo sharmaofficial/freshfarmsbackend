@@ -19,7 +19,6 @@ exports.addPackage = async(req, res, next) => {
         if(req.body.name){
             let payload = {
                 name: req.body.name,
-                id: getUniqueId(),
                 isActive: false
             }
             const response = await packageTypeSchema.create({...payload});

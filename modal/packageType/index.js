@@ -1,11 +1,6 @@
 var mongoose = require('mongoose');
 
 let packageTypeSchema = new mongoose.Schema({
-    id:{
-        type: String,
-        required: true,
-        unique: false,
-    },
     name:{
         type: Number,
         required: true,

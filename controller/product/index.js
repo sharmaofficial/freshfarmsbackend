@@ -1,3 +1,4 @@
+const categoriesSchema = require("../../modal/categories");
 const inventorySchema = require("../../modal/inventory")
 const packageTypeSchema = require("../../modal/packageType")
 const productSchema = require("../../modal/product");
@@ -19,8 +20,9 @@ exports.getProducts = (req, res, next) => {
 exports.getAllProductsForAdmin = async(req, res, next) => {
     try {
         const response = await productSchema.find({});
+        const categoryResponse = await categoriesSchema.find({});
         if(response){
-            res.send({status: 1, message:'Product list fetched', data: response});
+            res.send({status: 1, message:'Product list fetched', data: {products: response, categories: categoryResponse}});
         }else{
             res.send({status: 0, message:'No Product Found', data: null});
         }
@@ -93,7 +95,7 @@ exports.addProduct = async(req, res, next) => {
         categoryId: req.body.categoryId,
         description: req.body.description,
         estimated_delivery: req.body.estimated_delivery,
-        isActive: req.body.isActive,
+        isActive: false,
         coverImage: ""
     }
     try {
