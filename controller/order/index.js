@@ -341,6 +341,7 @@ exports.verifyPaymentHook = async(req, res, next) => {
 
 exports.updateOrderStatus = async(req, res, next) => {
     try {
+        console.log(req.body);
         const status = req.body.status;
         const id = req.body.id;
         if(id && status){
@@ -352,24 +353,24 @@ exports.updateOrderStatus = async(req, res, next) => {
                     'orderStatus': status,
                 },
             };
-            const response = await ordersSchema.findOneAndUpdate(condition, update, { new: true });
+            const response = await ordersSchema.findOneAndUpdate(condition, update, { returnOriginal: false });
             if (response) {
-                res.send({status: 1, message:'Orders updated successfully', data: null})
-                    const user = await userSchema.findOne({_id: response.userId});
-                    if(user.data.fcmToken){
-                        await adminInstance.messaging().send({
-                            data: {
-                                title: `Order Status Changed !`,
-                                body: `Order is: ${status}`,
-                            },
-                            token: user.data.fcmToken,
-                        });
-                    }
+                // const user = await userSchema.findOne({_id: response.userId});
+                // if(user.data.fcmToken){
+                //     await adminInstance.messaging().send({
+                //         data: {
+                //             title: `Order Status Changed !`,
+                //             body: `Order is: ${status}`,
+                //         },
+                //         token: user.data.fcmToken,
+                //     });
+                // }
+                res.send({status: 1, message:'Orders updated successfully', data: response})
             } else {
                 res.send({status: 0, message:'Error while updating order', data: null})
             }
         }else{
-            res.send({status: 1, message:'Please send all the required fields', data: null})
+            res.send({status: 0, message:'Please send all the required fields', data: null})
         }
     } catch (error) {
         res.send({status: 0, message: `Error while updating order -${error}` , data: null})

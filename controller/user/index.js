@@ -616,7 +616,7 @@ exports.updateUserStatusAdmin = async (req, res, next) => {
         };
     
         const options = {
-            new: true,
+            returnOriginal: false
         };
         const response = await userSchema.findOneAndUpdate({ _id: ObjectId(userId) }, update, options);
         if (response) {
