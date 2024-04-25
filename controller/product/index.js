@@ -1,3 +1,4 @@
+var mongoose = require('mongoose');
 const categoriesSchema = require("../../modal/categories");
 const inventorySchema = require("../../modal/inventory")
 const packageTypeSchema = require("../../modal/packageType")
@@ -120,25 +121,26 @@ exports.addProduct = async(req, res, next) => {
 
 exports.editProduct = async(req, res, next) => {
     if(req.body.coverImage){
+        let data = {...req.body, categoryId: mongoose.Types.ObjectId(req.body.categoryId)};
+        delete data._id;
         try {
             uploadImageToFirebaseAndReturnURL(
                 req,
                 async(url) => {
                     const update = {
                         $set: {
-                            ...req.body.data,
-                            profilePicture: url
+                            ...data,
+                            coverImage: url
                         },
                     };
                     const options = {
                         new: true,
                     };
-                    payload.coverImage = url;
-                    const response = await productSchema.findOneAndUpdate({_id: req.body.id}, update, options);
+                    const response = await productSchema.findOneAndUpdate({_id: req.body._id}, update, options);
                     if(response){
                         res.send({status: 1, message: "Product Updated Successfully !!", data: response});
                     }else{
-                        res.send({status: 0, message: "Product Updated Failed !!", data: null});
+                        res.send({status: 0, message: "Product not found !!", data: null});
                     }
                 },
                 (error) => {
@@ -149,20 +151,40 @@ exports.editProduct = async(req, res, next) => {
             res.send({status: 0, message: error, data: null})
         }
     }else{
-        const update = {
-            $set: {
-                ...req.body,
-            },
-        };
-        const options = {
-            new: true,
-        };
-        const response = await productSchema.findOneAndUpdate({_id: req.body.id}, update, options);
-        if(response){
-            res.send({status: 1, message: "Product Updated Successfully !!", data: response});
-        }else{
-            res.send({status: 0, message: "Product Updated Failed !!", data: null});
+        try {
+            let data = {...req.body, categoryId: mongoose.Types.ObjectId(req.body.categoryId)};
+            delete data._id;
+            delete data.coverImage;
+    
+            const update = {
+                $set: {
+                    ...data,
+                },
+            };
+    
+            const options = {
+                new: true,
+            };
+            const response = await productSchema.findOneAndUpdate({_id: req.body._id}, update, options);
+            if(response){
+                res.send({status: 1, message: `Product ${response.name} Updated Successfully !!`, data: response});
+            }else{
+                res.send({status: 0, message: "Product not found !!", data: null});
+            }
+        } catch (error) {   
+            console.log(error);
+            res.send({status: 0, message: `Product Updated Failed !! - ${error.message}`, data: null});         
         }
+    }
+}
+
+exports.deleteProduct = async(req, res, next) => {
+    console.log("req.body._id", req.body._id);
+    const response = await productSchema.deleteOne({_id: req.body._id});
+    if(response){
+        res.send({status: 1, message: `Product Deleted Successfully !!`, data: response});
+    }else{
+        res.send({status: 0, message: "Product not found !!", data: null});
     }
 }
 

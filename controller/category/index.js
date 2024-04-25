@@ -72,23 +72,28 @@ exports.editCategory = async(req, res, next) => {
             res.send({status: 0, message: error, data: null})
         }
     }else{
-        let data = {...req.body};
-        delete data._id;
-        delete data.coverImage;
-
-        const update = {
-            $set: {
-                ...data,
-            },
-        };
-        const options = {
-            new: true,
-        };
-        const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
-        if(response){
-            res.send({status: 1, message: `Category ${response.name} Updated Successfully !!`, data: response});
-        }else{
-            res.send({status: 0, message: "Category not found !!", data: null});
+        try {
+            let data = {...req.body};
+            delete data._id;
+            delete data.coverImage;
+    
+            const update = {
+                $set: {
+                    ...data,
+                },
+            };
+            const options = {
+                new: true,
+            };
+            const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
+            if(response){
+                res.send({status: 1, message: `Category ${response.name} Updated Successfully !!`, data: response});
+            }else{
+                res.send({status: 0, message: "Category not found !!", data: null});
+            } 
+        } catch (error) {   
+            console.log(error);
+            res.send({status: 0, message: `Product Updated Failed !! - ${error.message}`, data: null});         
         }
     }
 }
