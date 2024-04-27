@@ -356,18 +356,23 @@ exports.register = async (req, res, next) => {
     try {
         const { email, password, name, fcmToken, verifyOtp } = req.body;
         const existingUser = await userSchema.findOne({ 'data.email': email });
+        console.log("existingUser", existingUser);
         if (existingUser) {
-            if(verifyOtp){
-                if(existingUser.data.otp === verifyOtp){
-                    existingUser.data.otp = -1;
-                    existingUser.data.isVerified = true;
-                    await existingUser.save();
-                    res.json({ message: 'Registration successful', status: 1, data: null });
-                  }else{
-                    res.json({ message: 'Wrong OTP, please enter correct OTP sent on mail', status: 0, data: null });
-                  }
+            if(existingUser.data.isActive){
+                if(verifyOtp){
+                    if(existingUser.data.otp === verifyOtp){
+                        existingUser.data.otp = -1;
+                        existingUser.data.isVerified = true;
+                        await existingUser.save();
+                        res.json({ message: 'Registration successful', status: 1, data: null });
+                      }else{
+                        res.json({ message: 'Wrong OTP, please enter correct OTP sent on mail', status: 0, data: null });
+                      }
+                }else{
+                    res.send({ message: 'User already exist, please navigate to login screen', data: null, status: 0 });
+                }
             }else{
-                res.send({ message: 'User already exist', data: null, status: 0 });
+                res.send({ message: 'Your account is In-active, Please contact administrator', data: null, status: 0 });
             }
         }else{
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -390,7 +395,7 @@ exports.register = async (req, res, next) => {
             sendOTPEmail('', otp);
             const update = {
                 $set: {
-                    'data': {...savedUser.data, fcmToken: fcmToken, otp: otp},
+                    'data': {...savedUser.data, fcmToken: fcmToken, otp: otp, jwtToken: token},
                 },
             };
             const options = {
@@ -439,21 +444,21 @@ exports.uploadProfilePicture = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
     try {
       // Check if the email exists in the database
-      const user = await userSchema.findOne({ _id: req.userId });
+      const user = await userSchema.findOne({ 'data.email': req.body.email });
   
       if (!user) {
         res.json({ status: 0, token: null, message: 'Invalid email or password' });
+      }else{
+        // Generate and save an OTP
+        const otp = generateOTP();
+        user.data.otp = otp;
+        await user.save();
+    
+        // Send OTP email
+        sendOTPEmail(email='', otp);
+    
+        res.json({ message: 'OTP sent successfully', status: 1, data: {token: user.data.jwtToken} });
       }
-  
-      // Generate and save an OTP
-      const otp = generateOTP();
-      user.data.otp = otp;
-      await user.save();
-  
-      // Send OTP email
-      sendOTPEmail(email='', otp);
-  
-      res.json({ message: 'OTP sent successfully', status: 1 });
       
     } catch (error) {
       console.log(error);
@@ -475,7 +480,7 @@ exports.verifyOTP = async (req, res, next) => {
             user.data.isActive = true;
         }
         await user.save();
-        res.json({ message: 'OTP verified successfully', status: 1, data: null });
+        res.json({ message: 'OTP verified successfully', status: 1, data: {token: user.jwtToken} });
       }else{
         res.json({ message: 'Wrong OTP, please enter correct OTP sent on mail', status: 0, data: null });
       }
@@ -526,7 +531,8 @@ exports.adminLogin = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         const user = await userSchema.findOne({ 'data.email': email });
-        if (user && await bcrypt.compare(password, user.data.password)) {
+        // if (user && await bcrypt.compare(password, user.data.password)) {
+            if (user && (password ===  user.data.password)) {
             if(!user.data.isAdmin){
                 res.json({ status: 0, data: null, message: 'Please use these credentials to login via App, you are not an admin' });
             }else{

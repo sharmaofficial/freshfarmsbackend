@@ -39,7 +39,8 @@ let userSchema = new mongoose.Schema({
         isActive: {
             type: Boolean,
             require: true
-        }
+        },
+        jwtToken: String
     },
 });
 
