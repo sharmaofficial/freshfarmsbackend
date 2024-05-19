@@ -1,7 +1,7 @@
 const express = require('express');
 var router = express.Router();
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
-var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin} = require('../../controller/user');
+var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin, updatePasswordWithoutAuth} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct, getAllProductsForAdmin } = require('../../controller/product');
 const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
@@ -24,6 +24,7 @@ router.post('/register', register);
 router.post('/forgotPassword', forgotPassword);
 router.post('/verifyOTP', verifyOTP);
 router.post('/updatePassword', updatePassword);
+router.post('/updatePasswordWithoutAuth', updatePasswordWithoutAuth);
 router.post('/uploadProfilePicture', uploadProfilePicture);
 router.post('/add-place', addPlace);
 router.post('/update-place/:id', updatePlace);

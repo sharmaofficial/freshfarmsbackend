@@ -453,11 +453,11 @@ exports.forgotPassword = async (req, res, next) => {
         const otp = generateOTP();
         user.data.otp = otp;
         await user.save();
-    
+        console.log("user", user);
         // Send OTP email
         sendOTPEmail(email='', otp);
     
-        res.json({ message: 'OTP sent successfully', status: 1, data: {token: user.data.jwtToken} });
+        res.json({ message: 'OTP sent successfully', status: 1, data: {id: user._id} });
       }
       
     } catch (error) {
@@ -468,12 +468,14 @@ exports.forgotPassword = async (req, res, next) => {
 
 exports.verifyOTP = async (req, res, next) => {
     const OTP = req.body.otp
+    const userId = req.body.userId
     try {
-      const user = await userSchema.findOne({ _id: req.userId });
+      const user = await userSchema.findOne({ _id: userId });
       if (!user) {
         res.json({ status: 0, token: null, message: 'Invalid email or password' });
       }
-      if(user.data.otp === OTP){
+      console.log("user", user);
+      if(user?.data?.otp === OTP){
         user.data.otp = -1;
         if(!user.data.isVerified){
             user.data.isVerified = true;
@@ -494,6 +496,24 @@ exports.updatePassword = async (req, res, next) => {
     const password = req.body.password
     try {
       const user = await userSchema.findOne({ _id: req.userId });
+      if (!user) {
+        res.json({ status: 0, data: null, message: 'Invalid email or password' });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.data.password = hashedPassword
+      await user.save();
+      res.json({ message: 'Passord Reset Successfull', status: 1, data: user });
+    } catch (error) {
+      console.log(error);
+      res.json({ status: 0, data: null, message: error });
+    }
+};
+
+exports.updatePasswordWithoutAuth = async (req, res, next) => {
+    const password = req.body.password
+    const userId = req.body.userId
+    try {
+      const user = await userSchema.findOne({ _id: userId });
       if (!user) {
         res.json({ status: 0, data: null, message: 'Invalid email or password' });
       }
