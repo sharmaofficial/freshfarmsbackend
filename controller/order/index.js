@@ -136,7 +136,7 @@ exports.verifyOrder = (req, res, next) => {
                 $set: {
                     'isPaid': true,
                     'paymentDetails': {...response.data},
-                    'orderStatus': response.data.order_status
+                    // 'orderStatus': response.data.order_status
                 },
             };
             await ordersSchema.findOneAndUpdate(condition, update, { new: true });
@@ -355,17 +355,19 @@ exports.updateOrderStatus = async(req, res, next) => {
             };
             const response = await ordersSchema.findOneAndUpdate(condition, update, { returnOriginal: false });
             if (response) {
-                // const user = await userSchema.findOne({_id: response.userId});
-                // if(user.data.fcmToken){
-                //     await adminInstance.messaging().send({
-                //         data: {
-                //             title: `Order Status Changed !`,
-                //             body: `Order is: ${status}`,
-                //         },
-                //         token: user.data.fcmToken,
-                //     });
-                // }
-                res.send({status: 1, message:'Orders updated successfully', data: response})
+                const user = await userSchema.findOne({_id: response.userId});
+                if(user.data.fcmToken){
+                    await adminInstance.messaging().send({
+                        data: {
+                            title: `Order Status Changed !`,
+                            body: `Order is: ${status}`,
+                        },
+                        token: user.data.fcmToken,
+                    });
+                    res.send({status: 1, message:'Orders updated successfully', data: response})
+                }else{
+                    res.send({status: 1, message:'Orders updated successfully', data: response})
+                }
             } else {
                 res.send({status: 0, message:'Error while updating order', data: null})
             }

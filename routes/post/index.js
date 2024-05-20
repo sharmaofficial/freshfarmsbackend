@@ -6,7 +6,7 @@ const { getProducts, getProduct, addProduct, editProduct, getAllProductsForAdmin
 const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage } = require('../../controller/inventory');
 const { addCategory, editCategory, deleteCategory } = require('../../controller/category');
-const { addPackage, editPackage } = require('../../controller/packageType');
+const { addPackage, editPackage, getPackageByProductId } = require('../../controller/packageType');
 
 router.post('/createOrder', createOrder);
 router.post('/verifyOrder', verifyOrder);
@@ -48,5 +48,6 @@ router.post('/admin/addPackage', addPackage);
 router.post('/admin/editPackage', editPackage);
 router.post('/admin/editUser', userUpdateAdmin);
 router.post('/admin/updateUserStatus', updateUserStatusAdmin);
+router.post('/admin/getPackageByProductId', getPackageByProductId);
 
 module.exports = router;
