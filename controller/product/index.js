@@ -48,7 +48,7 @@ exports.getProduct = async(req, res, next) => {
                 let nonNullValues = [] ;
                 if(inventoryData){
                     mergedInventoryItems = inventoryData.packages.map(item => {
-                        if(item.qauntity > 1){
+                        if(item.qauntity > 1 && item.isActive){
                             let packageType = packageTypeData.find(item1 => {
                                 return item1._id.equals(item.packageTypeId);
                             });

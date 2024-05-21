@@ -18,7 +18,6 @@ exports.getPackages = async(req, res, next) => {
 exports.getPackageByProductId = async(req, res, next) => {
     try {
         const productId = req.body.productId;
-        console.log("productId", productId);
         if(productId){
             const response = await packageTypeSchema.find({isActive: true});
             const inventoryResponse = await inventory.find({productId: productId});

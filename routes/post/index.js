@@ -4,7 +4,7 @@ const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../contr
 var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin, updatePasswordWithoutAuth} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct, getAllProductsForAdmin } = require('../../controller/product');
 const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder } = require('../../controller/order');
-const { getLatestQuantityFromPackage } = require('../../controller/inventory');
+const { getLatestQuantityFromPackage, updateStock, updateProductPackageStatus } = require('../../controller/inventory');
 const { addCategory, editCategory, deleteCategory } = require('../../controller/category');
 const { addPackage, editPackage, getPackageByProductId } = require('../../controller/packageType');
 
@@ -49,5 +49,7 @@ router.post('/admin/editPackage', editPackage);
 router.post('/admin/editUser', userUpdateAdmin);
 router.post('/admin/updateUserStatus', updateUserStatusAdmin);
 router.post('/admin/getPackageByProductId', getPackageByProductId);
+router.post('/admin/updateStock', updateStock);
+router.post('/admin/updateProductPackageStatus', updateProductPackageStatus);
 
 module.exports = router;

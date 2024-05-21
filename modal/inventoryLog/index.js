@@ -3,7 +3,12 @@ var mongoose = require('mongoose');
 let inventoryLogSchema = new mongoose.Schema({
     orderId:{
         type: String,
-        required: true,
+        required: false,
+        unique: false,
+    },
+    updateData:{
+        type: mongoose.Schema.Types.Mixed,
+        required: false,
         unique: false,
     },
     dateTime:{
