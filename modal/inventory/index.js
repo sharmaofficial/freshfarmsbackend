@@ -7,8 +7,13 @@ let inventorySchema = new mongoose.Schema({
         unique: false,
     },
     packages:{
-        type: Array,
+        type: mongoose.Schema.Types.Mixed,
         required: true,
+        unique: false,
+    },
+    updatedAt:{
+        type: String,
+        required: false,
         unique: false,
     },
 });

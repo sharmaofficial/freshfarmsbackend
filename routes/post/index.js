@@ -3,7 +3,7 @@ var router = express.Router();
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
 var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin, updatePasswordWithoutAuth} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct, getAllProductsForAdmin } = require('../../controller/product');
-const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder } = require('../../controller/order');
+const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder, cancelOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage, updateStock, updateProductPackageStatus } = require('../../controller/inventory');
 const { addCategory, editCategory, deleteCategory } = require('../../controller/category');
 const { addPackage, editPackage, getPackageByProductId } = require('../../controller/packageType');
@@ -34,6 +34,7 @@ router.delete('/delete-place/:id', deletePlace);
 router.post('/myOrders', myOrders);
 router.post('/verifyPaymentHook', verifyPaymentHook);
 router.post('/getOrderStatus', getOrderStatus);
+router.post(`/cancelOrder`, cancelOrder);
 
 //admin
 router.post('/admin/login', adminLogin);

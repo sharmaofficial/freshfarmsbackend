@@ -241,7 +241,7 @@ const getInventoryStock = async(id, packageId, callback) => {
     });
 }
 
-const updateInvetoryLog = (orderId, callback) => {
+const updateInvetoryLog = (orderId, callback, type='Sell') => {
     function getCurrentDateTime() {
         const now = new Date();
       
@@ -262,7 +262,7 @@ const updateInvetoryLog = (orderId, callback) => {
     let payload = {
         orderId,
         dateTime: getCurrentDateTime(),
-        orderType: 'Sell'
+        orderType: type
     }
     try {
         inventoryLog.create({...payload});
@@ -345,16 +345,15 @@ exports.updateOrderStatus = async(req, res, next) => {
         const status = req.body.status;
         const id = req.body.id;
         if(id && status){
-            const condition = {
-                '_id': id,
-            };
-            const update = {
-                $set: {
-                    'orderStatus': status,
-                },
-            };
-            const response = await ordersSchema.findOneAndUpdate(condition, update, { returnOriginal: false });
-            if (response) {
+            const order = await ordersSchema.findOne({orderId: id});
+            if (order) {
+                if(order.orderStatus === 'Cancelled'){
+                    return res.send({status: 0, message:'Order Status can not be changed, as it is alredy in cancelled', data: null})
+                };
+                order.orderStatus = status;
+                order.updatedAt = new Date();
+                await order.save();
+
                 const user = await userSchema.findOne({_id: response.userId});
                 if(user.data.fcmToken){
                     await adminInstance.messaging().send({
@@ -364,18 +363,18 @@ exports.updateOrderStatus = async(req, res, next) => {
                         },
                         token: user.data.fcmToken,
                     });
-                    res.send({status: 1, message:'Orders updated successfully', data: response})
+                    return res.send({status: 1, message:'Orders updated successfully', data: response})
                 }else{
-                    res.send({status: 1, message:'Orders updated successfully', data: response})
+                    return res.send({status: 1, message:'Orders updated successfully', data: response})
                 }
             } else {
-                res.send({status: 0, message:'Error while updating order', data: null})
+                return res.send({status: 0, message:'Order not found', data: null})
             }
         }else{
-            res.send({status: 0, message:'Please send all the required fields', data: null})
+            return res.send({status: 0, message:'Please send all the required fields', data: null})
         }
     } catch (error) {
-        res.send({status: 0, message: `Error while updating order -${error}` , data: null})
+        return res.send({status: 0, message: `Error while updating order -${error}` , data: null})
     }
 }
 
@@ -384,4 +383,44 @@ function verify(ts, rawBody){
     const secretKey = process.env.XClientSecret;
     let genSignature = crypto.createHmac('sha256',secretKey).update(body).digest("base64");
     return genSignature
+}
+
+exports.cancelOrder = async(req, res, next) => {
+    try {
+        const orderId = req.body.orderId;
+        if(orderId){
+            const order = await ordersSchema.findById(orderId);
+            if(!order){
+                return res.send({status: 0, message:'Order not found', data: null})
+            }
+            if (order.orderStatus === 'In Transit' || order.orderStatus === 'Delivered') {
+                return res.send({status: 0, message:'Order cannot be canceled, as it is alredy in Transit or Delivered', data: null})
+            }
+            if(order.orderStatus === 'Cancelled'){
+                return res.send({status: 0, message:'Order cannot be canceled, as it is alredy in cancel state', data: null})
+            };
+
+            order.orderStatus = 'Cancelled';
+            order.updatedAt = new Date();
+            await order.save();
+
+            for (const product of order.products) {
+                // const inventoryRecord = await inventory.findOne({ productId: product._id });
+                const updateResult = await inventory.findOneAndUpdate(
+                    { productId: ObjectId(product._id), "packages.packageTypeId": ObjectId(product.packageType.packageTypeId) },
+                    { 
+                        $inc: { "packages.$.quantity": product.quantity },
+                        $set: { updatedAt: new Date() }
+                    },
+                    { new: true }
+                );
+            }
+            updateInvetoryLog(orderId, () => {}, 'Return')
+            return res.send({status: 1, message:'Order canceled successfully', data: order})
+        }else{
+           return res.send({status: 0, message:'Please send all the required fields', data: null})
+        }
+    } catch (error) {
+        return res.send({status: 0, message: `Error while updating order -${error.message}` , data: null})
+    }
 }

@@ -1,8 +1,10 @@
 var getRouter = require('../routes/get');
 var postRouter = require('../routes/post')
+var putRouter = require('../routes/put')
 var Routes = {
     getRouter,
-    postRouter
+    postRouter,
+    putRouter
 }
 
 module.exports = Routes;

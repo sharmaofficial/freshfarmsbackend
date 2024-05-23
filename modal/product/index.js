@@ -40,6 +40,11 @@ let productSchema = new mongoose.Schema({
         type: Number,
         required: false,
         unique: false,
+    },
+    shopName:{
+        type: String,
+        required: true,
+        unique: false,
     }
 });
 const products = mongoose.model('products', productSchema, 'products');

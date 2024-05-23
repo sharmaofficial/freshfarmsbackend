@@ -26,6 +26,11 @@ let ordersSchema = new mongoose.Schema({
         required: true,
         unique: false,
     },
+    updatedAt:{
+        type: String,
+        required: false,
+        unique: false,
+    },
     transactionId:{
         type: String,
         required: false,

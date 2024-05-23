@@ -99,6 +99,7 @@ exports.addProduct = async(req, res, next) => {
         categoryId: req.body.categoryId,
         description: req.body.description,
         estimated_delivery: req.body.estimated_delivery,
+        shopName: req.body.shopName,
         isActive: false,
         coverImage: ""
     }
