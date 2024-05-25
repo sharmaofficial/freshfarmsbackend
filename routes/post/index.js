@@ -1,7 +1,7 @@
 const express = require('express');
 var router = express.Router();
 const { addPlace, updatePlace, deletePlace, uploadImage } = require('../../controller/place');
-var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin, updatePasswordWithoutAuth} = require('../../controller/user');
+var {add, del, update, userUpdateAdmin, login, register, uploadProfilePicture, addAddress, updateAddress, deleteAddress, markDefaultAddress, forgotPassword, verifyOTP, updatePassword, myOrders, adminLogin, updateUserStatusAdmin, updatePasswordWithoutAuth, loginWithAppWrite, verifyOtpWithAppWrite} = require('../../controller/user');
 const { getProducts, getProduct, addProduct, editProduct, getAllProductsForAdmin } = require('../../controller/product');
 const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrderStatus, getOrder, cancelOrder } = require('../../controller/order');
 const { getLatestQuantityFromPackage, updateStock, updateProductPackageStatus } = require('../../controller/inventory');
@@ -35,6 +35,8 @@ router.post('/myOrders', myOrders);
 router.post('/verifyPaymentHook', verifyPaymentHook);
 router.post('/getOrderStatus', getOrderStatus);
 router.post(`/cancelOrder`, cancelOrder);
+router.post(`/loginWithAppWrite`, loginWithAppWrite);
+router.post(`/verifyOtpWithAppWrite`, verifyOtpWithAppWrite);
 
 //admin
 router.post('/admin/login', adminLogin);

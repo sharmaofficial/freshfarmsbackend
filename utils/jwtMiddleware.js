@@ -6,11 +6,11 @@ const verifyToken = (excludePaths) => (req, res, next) => {
     }
     const token = req.headers.authorization;
     if (!token) {
-        res.send({status: 0, message: 'No token provided', data: null})
+        return res.send({status: 0, message: 'No token provided', data: null})
     }
     jwt.verify(token, 'freshfarmsJWT', (err, decoded) => {
         if (err) {
-            res.send({status: 0, message: 'Invalid token', data: null})
+            return res.send({status: 0, message: 'Invalid token', data: null})
         }
         req.userId = decoded.userId;
         next();

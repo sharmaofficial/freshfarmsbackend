@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const orders = require('../../modal/order');
 const { ObjectId } = require('mongodb');
+const { account, users, databases } = require('../../database');
+const { ID, Query } = require('node-appwrite');
 
 let bucket = adminInstance.storage().bucket();
 
@@ -653,6 +655,54 @@ exports.updateUserStatusAdmin = async (req, res, next) => {
     } catch (error) {
         console.log("error", error);
         res.send({ message: error.message })
+    }
+}
+
+exports.loginWithAppWrite = async(req, res, next) => {
+    try {
+        const {phoneNumber} = req.body;
+        if(phoneNumber){
+            // const isActive = await account.getSession('current');
+            // if(isActive) await account.deleteSession('current');
+            const response = await account.createPhoneToken("665181880013836e1500", phoneNumber);
+            console.log("response", response);
+            res.send({ status: 1, message: `OTP Send Successfully`, data: response })
+        } 
+    }catch (error) {
+        res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
+    }
+}
+
+exports.verifyOtpWithAppWrite = async(req, res, next) => {
+    try {
+        const {userId, otp} = req.body;
+        if(userId && otp){
+            const response = await account.updatePhoneSession(userId, otp);
+            const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
+            const tokenCollection = await databases.listDocuments(
+                process.env.dbID,
+                process.env.tokenCollectID,
+                [Query.equal("userId", [userId])]
+            );
+            let userToken
+            if(!tokenCollection.total){
+                userToken = await databases.createDocument(
+                        process.env.dbID,
+                        process.env.tokenCollectID,
+                        ID.unique(),
+                        {
+                            userId,
+                            token
+                        }
+                )
+            }else{
+                userToken = tokenCollection.documents[0].token
+            }
+            const user = await users.get(response.userId);
+            res.send({ status: 1, message: `Login success`, data:  {...response, ...user, token: userToken}})
+        } 
+    }catch (error) {
+        res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
     }
 }
 
