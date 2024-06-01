@@ -1,13 +1,27 @@
+const { Query } = require("node-appwrite");
+const { databases } = require("../../database");
 const categoriySchema = require("../../modal/categories")
 const { adminInstance, getUniqueId } = require("../../utils");
 
 let bucket = adminInstance.storage().bucket();
 
-exports.getCategories = (req, res, next) => {
-    categoriySchema.find({ isActive: true }, (err, result) => {
-        if (err) throw err
-        res.send({ status: 1, message: 'Categories list fetched', data: result })
-    })
+exports.getCategories = async(req, res, next) => {
+    try {
+        const categories = await databases.listDocuments(
+            process.env.dbId,
+            process.env.categoriesCollectID,
+            [
+                Query.equal('isActive', [true])
+            ]
+        );
+        if(categories.total){
+            return res.send({status: 1, message: `category fetched successfully`, data: categories})
+        }else{
+            return res.send({status: 0, message: `No categories found`, data: []})
+        }
+    } catch (error) {
+        return res.send({status: 0, message: `something went wrong !! - ${error.message}`, data: null})
+    }
 };
 
 exports.getCategoriesForAdmin = (req, res, next) => {

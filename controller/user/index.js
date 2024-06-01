@@ -660,13 +660,34 @@ exports.updateUserStatusAdmin = async (req, res, next) => {
 
 exports.loginWithAppWrite = async(req, res, next) => {
     try {
-        const {phoneNumber} = req.body;
-        if(phoneNumber){
-            // const isActive = await account.getSession('current');
-            // if(isActive) await account.deleteSession('current');
-            const response = await account.createPhoneToken("665181880013836e1500", phoneNumber);
-            console.log("response", response);
-            res.send({ status: 1, message: `OTP Send Successfully`, data: response })
+        const {email} = req.body;
+        if(email){
+            const user = await users.list(
+                [Query.equal("email", [email])]
+            );
+            if(user.total){
+                const response = await account.createEmailToken(user.users[0].$id, email);
+                const tokenCollection = await databases.listDocuments(
+                    process.env.dbID,
+                    process.env.tokenCollectID,
+                    [Query.equal("userId", [user.users[0].$id])]
+                );
+                console.log(tokenCollection);
+                if(tokenCollection.total){
+                    await databases.updateDocument(
+                        process.env.dbID,
+                        process.env.tokenCollectID,
+                        tokenCollection.documents[0].$id,
+                        {
+                            otp: response.secret
+                        }
+                    );
+                }
+                console.log("response", response);
+                res.send({ status: 1, message: `OTP Send Successfully`, data: response })
+            }else{
+                res.send({ status: 0, message: `User not found, please register a new account`, data: null })
+            }
         } 
     }catch (error) {
         res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
@@ -677,31 +698,31 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
     try {
         const {userId, otp} = req.body;
         if(userId && otp){
-            const response = await account.updatePhoneSession(userId, otp);
-            const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
-            const tokenCollection = await databases.listDocuments(
+            // res.send({ status: 0, message: `Login failed`, data: null })
+            const response = await databases.listDocuments(
                 process.env.dbID,
                 process.env.tokenCollectID,
-                [Query.equal("userId", [userId])]
+                [Query.equal("otp", [otp])]
             );
-            let userToken
-            if(!tokenCollection.total){
-                userToken = await databases.createDocument(
-                        process.env.dbID,
-                        process.env.tokenCollectID,
-                        ID.unique(),
-                        {
-                            userId,
-                            token
-                        }
-                )
+            if(response.total){
+                const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
+                await databases.updateDocument(
+                    process.env.dbID,
+                    process.env.tokenCollectID,
+                    response.documents[0].$id,
+                    {
+                        token: token,
+                        otp: null
+                    }
+                );
+                const user = await users.get(response.documents[0].userId);
+                res.send({ status: 1, message: `Login success`, data:  {...response, ...user, token: token}})
             }else{
-                userToken = tokenCollection.documents[0].token
+                res.send({ status: 0, message: `Incorrect OTP`, data: null })
             }
-            const user = await users.get(response.userId);
-            res.send({ status: 1, message: `Login success`, data:  {...response, ...user, token: userToken}})
         } 
-    }catch (error) {
+    } catch (error) {
+        console.log(error);
         res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
     }
 }

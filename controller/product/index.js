@@ -4,17 +4,32 @@ const inventorySchema = require("../../modal/inventory")
 const packageTypeSchema = require("../../modal/packageType")
 const productSchema = require("../../modal/product");
 const { adminInstance, getUniqueId } = require("../../utils");
+const { databases } = require('../../database');
+const { Query } = require('node-appwrite');
 
 let bucket = adminInstance.storage().bucket();
 
-exports.getProducts = (req, res, next) => {
-    if(!req.body.categoryId){
-        res.send({status: 0, message:'Please send category id in api body', data: []})
-    }else{
-        productSchema.find({categoryId: req.body.categoryId, isActive: true},(error, result) => {
-            if(error) throw err
-            res.send({status: 1, message:'Product list fetched', data: result})
-        })
+exports.getProducts = async(req, res, next) => {
+    try {
+        const {categoryId} = req.body;
+        if(!categoryId){
+            res.send({status: 0, message:'Please send category id in api body', data: []})
+        }else{
+            const products = await databases.listDocuments(
+                process.env.dbId,
+                process.env.productsCollectID,
+                [
+                    Query.equal('category', [categoryId])
+                ]
+            );
+            if(products.total){
+                return res.send({status: 1, message: `products fetched`, data: products});
+            }else{
+                return res.send({status: 0, message: `No products found`, data: []});
+            }
+        }
+    } catch (error) {
+        return res.send({status: 0, message: `something went wrong !! - ${error.message}`, data: null})
     }
 }
 

@@ -5,7 +5,7 @@ const client = new sdk.Client();
 client
     .setEndpoint('https://cloud.appwrite.io/v1') // Your Appwrite Endpoint
     .setProject('64e80e85a95aa4319953')
-    .setKey("05f69c7a943775411b9c28e3a1a10839de43c64355d2e2031944cde85769071852de32c47d79e0f2b14e0ef188037b09e85de3a23bd57b2515d69b59573e09cd9358ace3e5f81e736b51d96e01becb67fbb449fc016b0184aed0b7902b3a3673015677f9de54bbb9b84d04f83e753f51bd25efc8b8a08af1dbca8e99611d7fbc");
+    .setKey("6d276b60cd825b8197099e9aa054d5aeee14de07036a7e2976e0fc62954cb3fcb9e228679cf603c310e1f39607386d39b03667771d9354dd2b823ea9692cd37d9897d28874449eb6bb9d4f6f1d769f9088374698123f1a58595a51379b6d9b503ea01994b7095326f5609ce66813b49ae10c38a10db6c9637786a0bda4b395bf");
 
 exports.databases = new sdk.Databases(client);
 exports.account = new sdk.Account(client);
