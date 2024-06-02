@@ -658,6 +658,15 @@ exports.updateUserStatusAdmin = async (req, res, next) => {
     }
 }
 
+exports.registerWithAppWrite =  async(req, res, next) => {
+    try {
+        
+    } catch (error) {
+        res.send({ status: 0, message: `Registration failed - ${error.message}`, data: null })
+        
+    }
+}
+
 exports.loginWithAppWrite = async(req, res, next) => {
     try {
         const {email} = req.body;
@@ -665,6 +674,7 @@ exports.loginWithAppWrite = async(req, res, next) => {
             const user = await users.list(
                 [Query.equal("email", [email])]
             );
+            console.log("user", user);
             if(user.total){
                 const response = await account.createEmailToken(user.users[0].$id, email);
                 const tokenCollection = await databases.listDocuments(
@@ -686,7 +696,23 @@ exports.loginWithAppWrite = async(req, res, next) => {
                 console.log("response", response);
                 res.send({ status: 1, message: `OTP Send Successfully`, data: response })
             }else{
-                res.send({ status: 0, message: `User not found, please register a new account`, data: null })
+                const user = await users.create(
+                    ID.unique(),
+                    email,
+                );
+                const response = await account.createEmailToken(user.$id, user.email);
+                await databases.createDocument(
+                    process.env.dbID,
+                    process.env.tokenCollectID,
+                    ID.unique(),
+                    {
+                        otp: response.secret,
+                        userId: user.$id,
+                        token: ''
+                    }
+                );
+                // res.send({ status: 0, message: `User not found, please register a new account`, data: null })
+                res.send({ status: 1, message: `OTP Send Successfully`, data: response })
             }
         } 
     }catch (error) {

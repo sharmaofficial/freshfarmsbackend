@@ -1,6 +1,8 @@
 const { ObjectId } = require("mongodb");
 const inventorySchema = require("../../modal/inventory");
 const inventoryLog = require("../../modal/inventoryLog");
+const { databases } = require("../../database");
+const { Query } = require("node-appwrite");
 
 exports.getLatestQuantityFromPackage = async(req, res, next) => {
     if(!req.body.productId){
@@ -10,16 +12,32 @@ exports.getLatestQuantityFromPackage = async(req, res, next) => {
     }
     else{
         try {
-            const response = await inventorySchema.findOne({productId: req.body.productId});
-            console.log("req.body.packageId", req.body.packageId);
-            console.log("response", response);
-            const availableQauntity = response.packages.find(package => package.packageTypeId.equals(req.body.packageId));
-            console.log("availableQauntity", availableQauntity);
-            if(response){
-                res.send({status: 1, message:'Quantity fetched', data: availableQauntity.qauntity});
+            const productQuantity = await databases.listDocuments(
+                process.env.dbId,
+                process.env.inventoryCollectID,
+                [
+                    Query.equal('productId', [req.body.productId]),
+                    Query.equal('packageId', [req.body.packageId]),
+                ]
+            );
+console.log("productQuantity", productQuantity.documents[0]);
+            if(productQuantity.total){
+                const quatity = productQuantity.documents[0].quantity;
+                res.send({status: 1, message:'Quantity fetched', data: quatity});
             }else{
-                res.send({status: 0, message:'Quantity Not Found', data: null});
+                res.send({status: 0, message:'Product Not Found', data: null});
             }
+
+            // const response = await inventorySchema.findOne({productId: req.body.productId});
+            // console.log("req.body.packageId", req.body.packageId);
+            // console.log("response", response);
+            // const availableQauntity = response.packages.find(package => package.packageTypeId.equals(req.body.packageId));
+            // console.log("availableQauntity", availableQauntity);
+            // if(response){
+            //     res.send({status: 1, message:'Quantity fetched', data: availableQauntity.qauntity});
+            // }else{
+            //     res.send({status: 0, message:'Quantity Not Found', data: null});
+            // }
 
         } catch (error) {
             console.log(error);

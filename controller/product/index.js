@@ -19,7 +19,8 @@ exports.getProducts = async(req, res, next) => {
                 process.env.dbId,
                 process.env.productsCollectID,
                 [
-                    Query.equal('category', [categoryId])
+                    Query.equal('category', [categoryId]),
+                    Query.equal('isActive', [true])
                 ]
             );
             if(products.total){
@@ -51,60 +52,86 @@ exports.getProduct = async(req, res, next) => {
     if(!req.body.id){
         res.send({status: 0, message:'Please send product id in api body', data: null})
     }else{
-        let query = {_id: req.body.id}
-        let inventoryData = [];
-        let packageTypeData = [];
-        try {
-            inventoryData = await inventorySchema.findOne({productId: req.body.id});
-            packageTypeData = await packageTypeSchema.find({});
-            const result = await productSchema.findOne({_id: req.body.id});
-            if(result){
-                let mergedInventoryItems = [];
-                let nonNullValues = [] ;
-                if(inventoryData){
-                    mergedInventoryItems = inventoryData.packages.map(item => {
-                        if(item.qauntity > 1 && item.isActive){
-                            let packageType = packageTypeData.find(item1 => {
-                                return item1._id.equals(item.packageTypeId);
-                            });
-                            if (packageType) {
-                                return {
-                                    ...item,
-                                    packageType: {
-                                        ...item,
-                                        name: packageType.name,
-                                        id: packageType.id,
-                                        price: result.price * packageType.name,
-                                    }
-                                };
-                            }
-                        }else{
-                            return {}
-                        }
-                    });
-                }
-                if(mergedInventoryItems.length){
-                    nonNullValues = mergedInventoryItems.filter(item => {
-                        if(Object.entries(item).length){
-                            return true
-                        }
-                        return false
-                    });  
-                }
-                let response = {productDetails: result, inventoryDetails: nonNullValues};
-                res.send({status: 1, message:'Product Details fetched', data: response})
-            }else{
-                res.send({status: 1, message: "Product not found", data: null})
+        const data = await databases.listDocuments(
+            process.env.dbId,
+            process.env.productsCollectID,
+            [
+                Query.equal('$id', [req.body.id])
+            ]
+        );
+        console.log("req.body.id", req.body.id);
+        console.log("data.documents[0].$id", data.documents[0].$id);
+        if(data.total){
+            const inventoryData = await databases.listDocuments(
+                process.env.dbId,
+                process.env.inventoryCollectID,
+                [
+                    Query.equal('productId', [data.documents[0].$id]),
+                    Query.greaterThan('quantity', [10]),
+                ]
+            );
+            let payload = {
+                inventory: inventoryData.documents,
+                productDetails: data.documents[0]
             }
-        } catch (error) {
-            res.send({status: 0, message: error.message, data: null})
+            console.log("payload", payload);
+            res.send({status: 1, message: "Success", data: payload})
+        }else{
+            res.send({status: 0, message: "Product details not found", data: null})
         }
-
-
-        productSchema.findOne({...query},(error, result) => {
-            if(error) throw err
+        // res.send({status: 1, message: "Success", data: []})
+        // let query = {_id: req.body.id}
+        // let inventoryData = [];
+        // let packageTypeData = [];
+        // try {
+        //     inventoryData = await inventorySchema.findOne({productId: req.body.id});
+        //     packageTypeData = await packageTypeSchema.find({});
+        //     const result = await productSchema.findOne({_id: req.body.id});
+        //     if(result){
+        //         let mergedInventoryItems = [];
+        //         let nonNullValues = [] ;
+        //         if(inventoryData){
+        //             mergedInventoryItems = inventoryData.packages.map(item => {
+        //                 if(item.qauntity > 1 && item.isActive){
+        //                     let packageType = packageTypeData.find(item1 => {
+        //                         return item1._id.equals(item.packageTypeId);
+        //                     });
+        //                     if (packageType) {
+        //                         return {
+        //                             ...item,
+        //                             packageType: {
+        //                                 ...item,
+        //                                 name: packageType.name,
+        //                                 id: packageType.id,
+        //                                 price: result.price * packageType.name,
+        //                             }
+        //                         };
+        //                     }
+        //                 }else{
+        //                     return {}
+        //                 }
+        //             });
+        //         }
+        //         if(mergedInventoryItems.length){
+        //             nonNullValues = mergedInventoryItems.filter(item => {
+        //                 if(Object.entries(item).length){
+        //                     return true
+        //                 }
+        //                 return false
+        //             });  
+        //         }
+        //         let response = {productDetails: result, inventoryDetails: nonNullValues};
+        //         res.send({status: 1, message:'Product Details fetched', data: response})
+        //     }else{
+        //         res.send({status: 1, message: "Product not found", data: null})
+        //     }
+        // } catch (error) {
+        //     res.send({status: 0, message: error.message, data: null})
+        // }
+        // productSchema.findOne({...query},(error, result) => {
+        //     if(error) throw err
             
-        })
+        // })
     }
 }
 
