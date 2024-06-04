@@ -151,33 +151,52 @@ exports.update = async (req, res, next) => {
 
 exports.addAddress = async (req, res, next) => {
     try {
-        const response = await userSchema.find({_id: req.userId});
-        if (response) {
-            getUpdateAddress(
-                response,
-                req,
-                async (addresses) => {console.log("addresses to add", addresses);
-                    const condition = {
-                        '_id': req.userId,
-                    };
-                    const update = {
-                        $set: {
-                            'data.addresses': addresses, // Use $ to identify the matched array element
-                        },
-                    };
-                    const resp = await userSchema.findOneAndUpdate(condition, update, { new: true });
-                    console.log("resp", resp);
-                    if (resp) {
-                        res.send({ status: 1, data: resp, message: 'User updated' });
-                    } else {
-                        res.send({ status: 0, data: [], message: 'error in User update' });
-                    }
-                }
-            )
-
-        } else {
-            res.send({ status: 0, message: 'User not updated' })
+        // req.body.addresses
+        const addressResponse = await databases.createDocument(
+            process.env.dbID,
+            process.env.addressCollectID,
+            ID.unique(),
+            {
+                ...req.body.addresses
+            }
+        );
+        const addressesList= await databases.listDocuments(
+            process.env.dbID,
+            process.env.addressCollectID
+        );
+        for (const doc of addressesList.documents) {
+            if (doc.$id !== addressResponse.$id) {
+                await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
+            }
         }
+        res.send({ status: 1, data: addressResponse, message: 'User updated' });
+        // const response = await userSchema.find({_id: req.userId});
+        // if (response) {
+        //     getUpdateAddress(
+        //         response,
+        //         req,
+        //         async (addresses) => {console.log("addresses to add", addresses);
+        //             const condition = {
+        //                 '_id': req.userId,
+        //             };
+        //             const update = {
+        //                 $set: {
+        //                     'data.addresses': addresses, // Use $ to identify the matched array element
+        //                 },
+        //             };
+        //             const resp = await userSchema.findOneAndUpdate(condition, update, { new: true });
+        //             console.log("resp", resp);
+        //             if (resp) {
+        //                 res.send({ status: 1, data: resp, message: 'User updated' });
+        //             } else {
+        //                 res.send({ status: 0, data: [], message: 'error in User update' });
+        //             }
+        //         }
+        //     )
+
+        // } else {
+        //     res.send({ status: 0, message: 'User not updated' })
+        // }
     } catch (error) {
         console.log("error", error);
         res.send({ status: 0, data: [], message: error.message })
@@ -245,52 +264,30 @@ exports.updateAddress = async (req, res, next) => {
 }
 
 exports.markDefaultAddress = async (req, res, next) => {
-    const userId = req.userId;
-    const addressId = req.body.id;
-
-    const existingUser = await userSchema.findById(userId);
-
-    if (!existingUser) {
-        return res.send({ status: 0, message: 'User not found' });
-    }
-
-    const existingAddresses = existingUser.data.addresses || [];
-
-    const updatedAddresses = existingAddresses.map((address) => {
-        if (address.id === addressId) {
-            return {
-                ...address,
-                isDefault: true 
-            };
-        }else{
-            return {
-                ...address,
-                isDefault: false 
-            };
+    try {
+        const addressId = req.body.id;
+        await databases.updateDocument(
+            process.env.dbID,
+            process.env.addressCollectID,
+            addressId,
+            {
+                isDefault: true
+            }
+        );
+        const addressesList= await databases.listDocuments(
+            process.env.dbID,
+            process.env.addressCollectID
+        );
+        for (const doc of addressesList.documents) {
+            if (doc.$id !== addressId) {
+                await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
+            }
         }
-    });
-
-    const update = {
-        $set: {
-            'data.addresses': updatedAddresses,
-        },
-    };
-
-    const options = {
-        new: true,
-    };
-
-    const updatedUser = await userSchema.findOneAndUpdate(
-        { _id: userId },
-        update,
-        options
-    );
-
-    if (updatedUser) {
-        res.send({ status: 1, data: updatedUser, message: 'User updated' });
-    } else {
-        res.send({ status: 0, data: [], message: 'Error in User update' });
+        res.send({ status: 1, data: addressesList.documents, message: 'User updated' });
+    } catch (error) {
+        res.send({ status: 0, data: null, message: `Error in User update - ${error.message}` });
     }
+    
 }
 
 exports.deleteAddress = async (req, res) => {
