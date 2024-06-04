@@ -730,6 +730,7 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                 process.env.tokenCollectID,
                 [Query.equal("otp", [otp])]
             );
+            console.log("response", response);
             if(response.total){
                 const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
                 await databases.updateDocument(
@@ -750,6 +751,36 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
     } catch (error) {
         console.log(error);
         res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
+    }
+}
+
+exports.getAddresses = async(req, res, next) => {
+    const {userId} = req;
+    try {
+        const response = await databases.listDocuments(
+            process.env.dbID,
+            process.env.tokenCollectID,
+            [
+                Query.equal("userId", [userId])
+            ]
+        );
+        if(response.total){
+            const tokenId = response.documents[0].$id;
+            const addresses = await databases.listDocuments(
+                process.env.dbID,
+                process.env.addressCollectID,
+                [
+                    Query.equal("user", [tokenId])
+                ]
+            );
+            if(addresses.total){
+                res.send({ status: 1, message: `Addresses fetched`, data: addresses})
+            }else{
+                res.send({ status: 0, message: `No Addresses found`, data: null})
+            }
+        }
+    } catch (error) {
+        res.send({ status: 0, message: `Something went wrong - ${error.message}`, data: null})
     }
 }
 
