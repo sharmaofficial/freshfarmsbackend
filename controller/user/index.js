@@ -528,18 +528,26 @@ exports.updatePasswordWithoutAuth = async (req, res, next) => {
 
 exports.myOrders = async (req, res, next) => {
     const userId = req.userId;
-    console.log("req.userId", req.userId);
+    console.log("userId", userId);
     try {
-      const user = await userSchema.findOne({ _id: req.userId });
-      if (!user) {
-        res.json({ status: 0, data: null, message: 'Invalid email or password' });
-      }
-      const ordersList = await orders.find({userId: req.userId});
-      if(ordersList){
-        res.json({ status: 1, data: ordersList, message: 'Order fetched' });
-      }else{
-        res.json({ status: 0, data: null, message: 'Error while fetching orders' });
-      }
+        const user = await databases.listDocuments(
+            process.env.dbID,
+            process.env.orderCollectID,
+            [
+                Query.equal('userId', [userId])
+            ]
+        )
+    res.json({ status: 1, data: user.documents, message: 'Order fetched'});
+    //   const user = await userSchema.findOne({ _id: req.userId });
+    //   if (!user) {
+    //     res.json({ status: 0, data: null, message: 'Invalid email or password' });
+    //   }
+    //   const ordersList = await orders.find({userId: req.userId});
+    //   if(ordersList){
+    //     res.json({ status: 1, data: ordersList, message: 'Order fetched' });
+    //   }else{
+    //     res.json({ status: 0, data: null, message: 'Error while fetching orders' });
+    //   }
     } catch (error) {
       console.log(error);
       res.json({ status: 0, data: null, message: error });

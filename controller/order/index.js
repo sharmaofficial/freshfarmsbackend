@@ -7,6 +7,8 @@ const crypto = require('crypto');
 
 const { Cashfree } = require("cashfree-pg");
 const { ObjectId } = require("mongodb");
+const { databases } = require("../../database");
+const { ID } = require("node-appwrite");
 
 Cashfree.XClientId = process.env.XClientId;
 Cashfree.XClientSecret = process.env.XClientSecret;
@@ -59,47 +61,65 @@ exports.getOrderStatus = async(req, res, next) => {
     }
 }
 
-exports.createOrder = (req, res, next) => {
-    const orderId = getUniqueId();
-    let payload = {
-        ...req.body,
-        orderId: orderId,
-        paymentDetails: {},
-        isPaid: false,
-        orderStatus: 'Processing'
-    }
-    ordersSchema.create({...payload},(err, result)=>{
-        if(err)throw err
-        // res.send({status: 1, message:'Orders Created', data: result});
-        createCFOrderId(
+exports.createOrder = async(req, res, next) => {
+    try {
+        const orderId = getUniqueId();
+        let payload = {
+            ...req.body,
+            orderId: orderId,
+            isPaid: false,
+            orderStatus: 'Processing',
+            userId: req.userId,
+            updatedAt: new Date(),
+            dateTime: new Date()
+        }
+        console.log("payload", payload);
+        const response = await databases.createDocument(
+            process.env.dbId,
+            process.env.orderCollectID,
+            ID.unique(),
             {
-                order_id: orderId,
-                order_amount: req.body.totalAmout,
-                order_currency: "INR",
-                customer_details: {
-                    customer_id: req.userId,
-                    customer_phone: req.body?.address?.phoneNumber || "",
-                    customer_name: req.body?.address?.name || ""
-                }
-            },
-            (response) => {
-                res.send({status: 1, message:'Orders Created', data: response});
-            },
-            async () => {
-                const condition = {
-                    'orderId': orderId, // Match the package with a specific id
-                };
+                ...payload
+            }
+        )
+        res.send({status: 1, message:'Orders Created', data: response});
+    } catch (error) {
+        console.log("error", error);
+        res.send({status: 0, message: `Orders creation failed - ${error.message}` , data: null});
+    }
+    
+    // ordersSchema.create({...payload},(err, result)=>{
+    //     if(err)throw err
+    //     // res.send({status: 1, message:'Orders Created', data: result});
+    //     createCFOrderId(
+    //         {
+    //             order_id: orderId,
+    //             order_amount: req.body.totalAmout,
+    //             order_currency: "INR",
+    //             customer_details: {
+    //                 customer_id: req.userId,
+    //                 customer_phone: req.body?.address?.phoneNumber || "",
+    //                 customer_name: req.body?.address?.name || ""
+    //             }
+    //         },
+    //         (response) => {
+    //             res.send({status: 1, message:'Orders Created', data: response});
+    //         },
+    //         async () => {
+    //             const condition = {
+    //                 'orderId': orderId, // Match the package with a specific id
+    //             };
               
-                const update = {
-                    $set: {
-                        'orderStatus': "Terminated due to payment failure", // Use $ to identify the matched array element
-                    },
-                };
-                await ordersSchema.findOneAndUpdate(condition, update, {new: true})
-                res.send({status: 0, message:'Error while placing order', data: null});
-            })
-        // updateInventory(payload.orderId)
-    });
+    //             const update = {
+    //                 $set: {
+    //                     'orderStatus': "Terminated due to payment failure", // Use $ to identify the matched array element
+    //                 },
+    //             };
+    //             await ordersSchema.findOneAndUpdate(condition, update, {new: true})
+    //             res.send({status: 0, message:'Error while placing order', data: null});
+    //     })
+    //     // updateInventory(payload.orderId)
+    // });
 
     const createCFOrderId = (request, successCallback, errorCallback) => {
         // let request = {
