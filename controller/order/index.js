@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { Cashfree } = require("cashfree-pg");
 const { ObjectId } = require("mongodb");
 const { databases } = require("../../database");
-const { ID } = require("node-appwrite");
+const { ID, Query } = require("node-appwrite");
 
 Cashfree.XClientId = process.env.XClientId;
 Cashfree.XClientSecret = process.env.XClientSecret;
@@ -49,10 +49,15 @@ exports.getOrder = async(req, res, next) => {
 
 exports.getOrderStatus = async(req, res, next) => {
     try {
-        const response = await ordersSchema.findOne({orderId: req.body.orderId});
-        console.log("response", response);
-        if(response){
-            res.send({status: 1, message:'', data: response})
+        const response = await databases.listDocuments(
+            process.env.dbId,
+            process.env.orderCollectID,
+            [
+                Query.equal("orderId", req.body.orderId)
+            ]
+        )
+        if(response.total){
+            res.send({status: 1, message:'', data: response.documents[0]})
         }else{
             res.send({status: 1, message:'Order not found', data: null})
         }
@@ -62,8 +67,32 @@ exports.getOrderStatus = async(req, res, next) => {
 }
 
 exports.createOrder = async(req, res, next) => {
+    const createCFOrderId = (request, successCallback, errorCallback) => {
+        // let request = {
+        //     order_amount: 1,
+        //     order_currency: "INR",
+        //     order_id: orderId,
+        //     customer_details: {
+        //         customer_id: "walterwNrcMi",
+        //         customer_phone: "9999999999"
+        //     },
+        //     order_meta: {
+        //         return_url: `https://www.cashfree.com/devstudio/preview/pg/web/checkout?order_id=${orderId}`
+        //     }
+        // };
+        // console.log("request", request);
+        Cashfree.PGCreateOrder("2022-09-01", request).then((response) => {
+            console.log('Order Created successfully:',response.data)
+            successCallback(response.data);
+        }).catch((error) => {
+            console.error('Error:', error);
+            errorCallback(error);
+        });
+    }
+
     try {
         const orderId = getUniqueId();
+        const address = JSON.parse(req.body?.address)
         let payload = {
             ...req.body,
             orderId: orderId,
@@ -74,7 +103,7 @@ exports.createOrder = async(req, res, next) => {
             dateTime: new Date()
         }
         console.log("payload", payload);
-        const response = await databases.createDocument(
+        await databases.createDocument(
             process.env.dbId,
             process.env.orderCollectID,
             ID.unique(),
@@ -82,7 +111,24 @@ exports.createOrder = async(req, res, next) => {
                 ...payload
             }
         )
-        res.send({status: 1, message:'Orders Created', data: response});
+        createCFOrderId(
+            {
+                order_id: orderId,
+                order_amount: req.body.totalAmout,
+                order_currency: "INR",
+                customer_details: {
+                    customer_id: req.userId,
+                    customer_phone: address?.contactNumber.toString() || "",
+                    customer_name: address?.name || ""
+                }
+            },
+            (response) => {
+                res.send({status: 1, message:'Orders Created', data: response});
+            },
+            error => {
+                res.send({status: 0, message:'Orders Creation failed - ' + error.message, data: null});
+            }
+        )
     } catch (error) {
         console.log("error", error);
         res.send({status: 0, message: `Orders creation failed - ${error.message}` , data: null});
@@ -120,62 +166,135 @@ exports.createOrder = async(req, res, next) => {
     //     })
     //     // updateInventory(payload.orderId)
     // });
-
-    const createCFOrderId = (request, successCallback, errorCallback) => {
-        // let request = {
-        //     order_amount: 1,
-        //     order_currency: "INR",
-        //     order_id: orderId,
-        //     customer_details: {
-        //         customer_id: "walterwNrcMi",
-        //         customer_phone: "9999999999"
-        //     },
-        //     order_meta: {
-        //         return_url: `https://www.cashfree.com/devstudio/preview/pg/web/checkout?order_id=${orderId}`
-        //     }
-        // };
-        // console.log("request", request);
-        Cashfree.PGCreateOrder("2022-09-01", request).then((response) => {
-            // console.log('Order Created successfully:',response.data)
-            successCallback(response.data);
-        }).catch((error) => {
-            console.error('Error:', error);
-            errorCallback();
-        });
-    }
 }
 
-exports.verifyOrder = (req, res, next) => {
+exports.verifyOrder = async(req, res, next) => {
     Cashfree.PGFetchOrder("2022-09-01", req.body.orderId).then(async (response) => {
         let orderId = req.body.orderId
         if(response.data.order_status === 'PAID'){
-            const condition = {
-                'orderId': orderId,
-            };
-            const update = {
-                $set: {
-                    'isPaid': true,
-                    'paymentDetails': {...response.data},
-                    // 'orderStatus': response.data.order_status
-                },
-            };
-            await ordersSchema.findOneAndUpdate(condition, update, { new: true });
-            updateInventory(orderId, res, req, (error) => {
-                res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
-            });
+            const transaction = await databases.createDocument(
+                process.env.dbId,
+                process.env.transactionCollectID,
+                ID.unique(),
+                {
+                    transactionDetails: JSON.stringify({
+                        ...response.data
+                    })
+                }
+            )
+            const order = await databases.listDocuments(
+                process.env.dbId,
+                process.env.orderCollectID,
+                [
+                    Query.equal("orderId", [orderId])
+                ]
+            )
+            if(order.total){
+                await databases.updateDocument(
+                    process.env.dbId,
+                    process.env.orderCollectID,
+                    order.documents[0].$id,
+                    {
+                        transactionId: transaction.$id,
+                        isPaid: true
+
+                    }
+                );
+                const products = JSON.parse(order.documents[0].products)
+                products.forEach(async product => {
+                    const invetory = await databases.listDocuments(
+                        process.env.dbId,
+                        process.env.inventoryCollectID,
+                        [
+                            Query.equal("productId", product.$id)
+                        ]
+                    )
+                    const {quantity} = product;
+                    const {quantity: currentQuantity} = invetory.documents[0]
+
+                    let updateQuantity = Number(currentQuantity)-Number(quantity);
+
+                    await databases.updateDocument(
+                        process.env.dbId,
+                        process.env.inventoryCollectID,
+                        invetory.documents[0].$id,
+                        {
+                            quantity: Number(updateQuantity)
+                        }
+                    );
+                    await databases.createDocument(
+                        process.env.dbId,
+                        process.env.inventoryCollectID,
+                        ID.unique(),
+                        {
+                            orderId: order.documents[0].$id,
+                            createdAt: new Date(),
+                            orderType: 'SELL'
+                        }
+                    )
+                });
+                //SEND Notification to app using appwrite messaging
+                // const user = await userSchema.findOne({_id: req.userId});
+                // if(user.data.fcmToken){
+                //     await adminInstance.messaging().send({
+                //         data: {
+                //             title: `Order Placed Successfully !`,
+                //             body: `Order is placed and in processing, hang tight we will deliver it soon !
+                //                 \n Your Order id is: ${orderId}`,
+                //         },
+                //         token: user.data.fcmToken,
+                //         });
+                // }
+                res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
+            }else{
+                res.send({status: 0, message:'Order not found', data: null})
+            }
+            // const condition = {
+            //     'orderId': orderId,
+            // };
+            // const update = {
+            //     $set: {
+            //         'isPaid': true,
+            //         'paymentDetails': {...response.data},
+            //         // 'orderStatus': response.data.order_status
+            //     },
+            // };
+            // await ordersSchema.findOneAndUpdate(condition, update, { new: true });
+            // updateInventory(orderId, res, req, (error) => {
+            //     res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
+            // });
         }else{
-            const condition = {
-                'orderId': orderId,
-            };
-            const update = {
-                $set: {
-                    'isPaid': false,
-                    'orderStatus': response.data.order_status,
-                    'paymentDetails': {...response.data},
-                },
-            };
-            await ordersSchema.findOneAndUpdate(condition, update, { new: true });
-            res.send({status: 1, message:'Orders payment pending', data: response.data});
+            const transaction = await databases.createDocument(
+                process.env.dbId,
+                process.env.transactionCollectID,
+                ID.unique(),
+                {
+                    transactionDetails: JSON.stringify({
+                        ...response.data
+                    })
+                }
+            )
+            const order = await databases.listDocuments(
+                process.env.dbId,
+                process.env.orderCollectID,
+                [
+                    Query.equal("orderId", [req.body.orderId])
+                ]
+            )
+            if(order.total){
+                await databases.updateDocument(
+                    process.env.dbId,
+                    process.env.orderCollectID,
+                    order.documents[0].$id,
+                    {
+                        transactionId: transaction.$id,
+                        isPaid: false
+                    }
+                );
+                res.send({status: 1, message:'Orders payment pending', data: response.data});
+            }else{
+                res.send({status: 0, message:'Order not found', data: null})
+            }
         }
     }).catch((error) => {
         console.error('Error:', error);
