@@ -11,4 +11,5 @@ exports.databases = new sdk.Databases(client);
 exports.account = new sdk.Account(client);
 exports.storage = new sdk.Storage(client);
 exports.users = new sdk.Users(client);
+exports.messaging = new sdk.Messaging(client);
 exports.appwriteSDK = sdk

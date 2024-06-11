@@ -7,14 +7,15 @@ const { getCategories, getCategoriesForAdmin } = require('../../controller/categ
 const { getPackages } = require('../../controller/packageType');
 const { getAllProductsForAdmin } = require('../../controller/product');
 const { getInventoryLog } = require('../../controller/inventoryLog');
+const { getPrivacypolicy } = require('../../controller/policy');
 
 router.get('/addresses', getAddresses);
 router.get('/', list);
 router.get('/getCategories', getCategories);
 router.get('/getOrders', getOrders);
 router.get('/getplaces', placeList);
+router.get('/getPrivacypolicy', getPrivacypolicy);
 router.get('/:id', details);
-
 //admin
 router.get('/admin/getPackages', getPackages);
 router.get('/admin/getOrders', getOrders);

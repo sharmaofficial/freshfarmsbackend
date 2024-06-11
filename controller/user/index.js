@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const orders = require('../../modal/order');
 const { ObjectId } = require('mongodb');
-const { account, users, databases } = require('../../database');
+const { account, users, databases, appwriteSDK, messaging } = require('../../database');
 const { ID, Query } = require('node-appwrite');
 
 let bucket = adminInstance.storage().bucket();
@@ -414,26 +414,26 @@ exports.register = async (req, res, next) => {
 exports.uploadProfilePicture = async (req, res, next) => {
     console.log("request", req.file)
     try {
-        let user = await userSchema.findOne({_id: req.userId});
-        console.log("user", user);
-        if (!req.file) {
-            return res.send({ status: 0, data: null, message: 'Please add profile picture' });
-        }
-        bucket.upload(req.file.path, {
-            metadata: {
-                metadata: {
-                  firebaseStorageDownloadTokens: req.userId
-                }
-            }
-        }).then(async result => {
-                let file = result[0];
-                let url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(file.name) + "?alt=media&token=" + req.userId;
-                user.data.profilePicture = url;
-                await user.save();
-                return res.send({ status: 1, data: url, message: 'Profile picture uploaded' });
-        }).catch(error => {
-            res.send({ status: 0, data: null, message: error.message });
-        });
+        // let user = await userSchema.findOne({_id: req.userId});
+        // console.log("user", user);
+        // if (!req.file) {
+        //     return res.send({ status: 0, data: null, message: 'Please add profile picture' });
+        // }
+        // bucket.upload(req.file.path, {
+        //     metadata: {
+        //         metadata: {
+        //           firebaseStorageDownloadTokens: req.userId
+        //         }
+        //     }
+        // }).then(async result => {
+        //         let file = result[0];
+        //         let url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(file.name) + "?alt=media&token=" + req.userId;
+        //         user.data.profilePicture = url;
+        //         await user.save();
+        //         return res.send({ status: 1, data: url, message: 'Profile picture uploaded' });
+        // }).catch(error => {
+        //     res.send({ status: 0, data: null, message: error.message });
+        // });
     } catch (error) {
         console.log("error", error);
         res.send({ status: 0, data: null, message: error.message });
@@ -727,15 +727,13 @@ exports.loginWithAppWrite = async(req, res, next) => {
 
 exports.verifyOtpWithAppWrite = async(req, res, next) => {
     try {
-        const {userId, otp} = req.body;
+        const {userId, otp, fcmToken} = req.body;
         if(userId && otp){
-            // res.send({ status: 0, message: `Login failed`, data: null })
             const response = await databases.listDocuments(
                 process.env.dbID,
                 process.env.tokenCollectID,
                 [Query.equal("otp", [otp])]
             );
-            console.log("response", response);
             if(response.total){
                 const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
                 await databases.updateDocument(
@@ -744,10 +742,20 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                     response.documents[0].$id,
                     {
                         token: token,
-                        otp: null
+                        otp: null,
+                        fcmToken: fcmToken
                     }
                 );
                 const user = await users.get(response.documents[0].userId);
+                if(fcmToken){
+                    await adminInstance.messaging().send({
+                        data: {
+                          title: `Welcome to Freshfarms !`,
+                          body: `Happy Shopping !!`,
+                        },
+                        token: fcmToken,
+                    });
+                }
                 res.send({ status: 1, message: `Login success`, data:  {...response, ...user, token: token}})
             }else{
                 res.send({ status: 0, message: `Incorrect OTP`, data: null })

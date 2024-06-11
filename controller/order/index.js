@@ -170,7 +170,7 @@ exports.createOrder = async(req, res, next) => {
 
 exports.verifyOrder = async(req, res, next) => {
     Cashfree.PGFetchOrder("2022-09-01", req.body.orderId).then(async (response) => {
-        let orderId = req.body.orderId
+        const orderId = req.body.orderId
         if(response.data.order_status === 'PAID'){
             const transaction = await databases.createDocument(
                 process.env.dbId,
@@ -233,18 +233,25 @@ exports.verifyOrder = async(req, res, next) => {
                         }
                     )
                 });
-                //SEND Notification to app using appwrite messaging
-                // const user = await userSchema.findOne({_id: req.userId});
-                // if(user.data.fcmToken){
-                //     await adminInstance.messaging().send({
-                //         data: {
-                //             title: `Order Placed Successfully !`,
-                //             body: `Order is placed and in processing, hang tight we will deliver it soon !
-                //                 \n Your Order id is: ${orderId}`,
-                //         },
-                //         token: user.data.fcmToken,
-                //         });
-                // }
+                
+                //SEND Notification to app using firebase messaging
+                const userDetails = await databases.listDocuments(
+                    process.env.dbId,
+                    process.env.tokenCollectID,
+                    [
+                        Query.equal("userId", order.documents[0].userId)
+                    ]
+                )
+                if(userDetails.documents[0]?.fcmToken){
+                    await adminInstance.messaging().send({
+                        data: {
+                          title: `Order Placed Successfully !`,
+                          body: `Order is placed and in processing, hang tight we will deliver it soon !
+                                \n Your Order id is: ${orderId}`,
+                        },
+                        token: userDetails.documents[0]?.fcmToken,
+                    });
+                }
                 res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
             }else{
                 res.send({status: 0, message:'Order not found', data: null})
