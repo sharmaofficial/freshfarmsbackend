@@ -1,5 +1,11 @@
+const { users } = require("../../database");
+
 exports.getPrivacypolicy = async(req, res, next) => {
     try {
+        const user = await users.get(
+            req.userId
+        );
+        console.log("user", user);
         const htmlContent = `
         <!DOCTYPE html>
             <html lang="en">

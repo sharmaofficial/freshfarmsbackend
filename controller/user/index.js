@@ -5,8 +5,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const orders = require('../../modal/order');
 const { ObjectId } = require('mongodb');
-const { account, users, databases, appwriteSDK, messaging } = require('../../database');
-const { ID, Query } = require('node-appwrite');
+const { account, users, databases, appwriteSDK, messaging, storage } = require('../../database');
+const { ID, Query, InputFile } = require('node-appwrite');
 
 let bucket = adminInstance.storage().bucket();
 
@@ -60,73 +60,181 @@ exports.del = async (req, res, next) => {
 exports.update = async (req, res, next) => {
     try {
         const userId = req.userId;
-        const user = await userSchema.findOne({ _id: userId });
-        const data = user.data;
         if(req.body.image){
-            uploadImageToFirebaseAndReturnURL(req,
-                async (url) => {
-                    let payload = {...data, ...req.body, profilePicture: url};
-                    const update = {
-                        $set: {
-                            'data': payload,
-                        },
-                    };
-                
+            const {url, fileId} = await uploadImageToFirebaseAndReturnURL(req);
+            console.log("result", url, fileId);
+            const profileDetails = await databases.listDocuments(
+                process.env.dbID,
+                process.env.profileCollectID,
+                [
+                    Query.equal("userId", userId)
+                ]
+            );
 
-                    const options = {
-                        new: true,
-                    };
-                    const response = await userSchema.findOneAndUpdate({ _id: userId }, update, options);
-                    if (response) {
-                        res.send({ status: 1, data: response, message: 'User updated' })
-                    } else {
-                        res.send({ status: 0, message: 'Userv not updated' })
+            if(profileDetails.total){
+                await databases.updateDocument(
+                    process.env.dbID,
+                    process.env.profileCollectID,
+                    profileDetails.documents[0].$id,
+                    {
+                        profilePicture: url,
+                        fileId: fileId
                     }
-                },
-            )
-        }else{
-            let payload = {...data, ...req.body};
-            const update = {
-                $set: {
-                    'data': payload,
-                },
-            };
-        
-            const options = {
-                new: true,
-            };
-            const response = await userSchema.findOneAndUpdate({ _id: userId }, update, options);
-            if (response) {
-                res.send({ status: 1, data: response, message: 'User updated' })
-            } else {
-                res.send({ status: 0, message: 'Userv not updated' })
+                )
+            }else{
+                await databases.createDocument(
+                    process.env.dbID,
+                    process.env.profileCollectID,
+                    ID.unique(),
+                    {
+                        userId: userId,
+                        profilePicture: url,
+                        fileId: fileId
+                    }
+                )
             }
+            // await uploadImageToFirebaseAndReturnURL(req,
+            //     async (url, fileId) => {
+            //         console.log("url", url);
+            //         console.log("fileId", fileId);
+            //         try {
+            //             const profileDetails = await databases.listDocuments(
+            //                 process.env.dbID,
+            //                 process.env.profileCollectID,
+            //                 [
+            //                     Query.equal("userId", userId)
+            //                 ]
+            //             );
+            //             if(profileDetails.total){
+            //                 await databases.updateDocument(
+            //                     process.env.dbID,
+            //                     process.env.profileCollectID,
+            //                     profileDetails.documents[0].$id,
+            //                     {
+            //                         profilePicture: url,
+            //                         fileId: fileId
+            //                     }
+            //                 )
+            //             }else{
+            //                 await databases.createDocument(
+            //                     process.env.dbID,
+            //                     process.env.profileCollectID,
+            //                     ID.unique(),
+            //                     {
+            //                         userId: userId,
+            //                         profilePicture: url,
+            //                         fileId: fileId
+            //                     }
+            //                 )
+            //             }
+            //         } catch (error) {
+            //             return res.send({status: 0, message: error.message, data: null })
+            //         }
+            //     },
+            //     (error) => {
+            //         return res.send({status: 0, message: error.message, data: null })
+            //     }
+            // );
+            const {name, mobile} = req.body;
+            if(name){
+                await users.updateName(userId, name);
+            }
+            if(mobile){
+                await users.updatePhone(userId, mobile);
+            }
+            const userDetails = await users.get(userId);
+            const profile = await databases.listDocuments(
+                process.env.dbID,
+                process.env.profileCollectID,
+                [
+                    Query.equal("userId", userId)
+                ]
+            )
+            return res.send({ status: 1, data: {...userDetails, ...profile.documents[0]}, message: 'User updated' });
+        }else{
+            const {name, mobile} = req.body;
+            if(name){
+                await users.updateName(userId, name);
+            }
+            if(mobile){
+                await users.updatePhone(userId, mobile);
+            }
+            const userDetails = await users.get(userId);
+            const profile = await databases.listDocuments(
+                process.env.dbID,
+                process.env.profileCollectID,
+                [
+                    Query.equal("userId", userId)
+                ]
+            )
+            return res.send({ status: 1, data: {...userDetails, ...profile.documents[0]}, message: 'User updated' }); 
         }
-
     } catch (error) {
         console.log("error", error);
-        res.send({ message: error.message })
+        return res.send({status: 0, message: error.message, data: null })
     }
 
-    function uploadImageToFirebaseAndReturnURL(req, successCallback, errorCallback){
-        try {
-            const buffer = Buffer.from(req.body.image.base64, 'base64');
-            const fileName = `user_profile_picture_${req.userId}${getUniqueId()}` + getExtensionFromMimeType(req.body.image.type); // Replace with your desired file path and name
-            const file = bucket.file(fileName);
-            file.createWriteStream().end(buffer)
-            console.log("success");
-            file.getSignedUrl({ action: 'read', expires: '03-09-2055' })
-            .then((url) => {
-                console.log('Image URL:', url);
-                successCallback(url[0]);
-            })
-            .catch((error) => {
-                console.error('Error getting signed URL:', error);
-            });
-        } catch (error) {
-            console.log("error", error);
-            errorCallback(error);
-        }
+    async function uploadImageToFirebaseAndReturnURL(req, successCallback, errorCallback){
+        return new Promise(async(res, rej) => {
+            try {
+                const buffer = Buffer.from(req.body.image.base64, 'base64');
+                const fileName = `user_profile_picture_${req.userId}` + getExtensionFromMimeType(req.body.image.type); // Replace with your desired file path and name
+                const result = InputFile.fromBuffer(buffer, fileName);
+                const profileDetails = await databases.listDocuments(
+                    process.env.dbID,
+                    process.env.profileCollectID,
+                    [
+                        Query.equal("userId", req.userId)
+                    ]
+                );
+                if(profileDetails.total){
+                    const response = await storage.getFile(
+                        process.env.bucketID,
+                        profileDetails.documents[0].fileId,
+                    );
+                    if(response){
+                        const response = await storage.updateFile(
+                            process.env.bucketID,
+                            profileDetails.documents[0].fileId,
+                            fileName,
+                        );
+                        const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}&mode=admin`;
+                        return res({url: fileURL, fileId: response.$id});
+                    }else{
+                        const response = await storage.createFile(
+                            process.env.bucketID,
+                            ID.unique(),
+                            result, 
+                        )
+                        const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}&mode=admin`;
+                        return res({url: fileURL, fileId: response.$id});
+                    }
+                }else{
+                    const response = await storage.createFile(
+                        process.env.bucketID,
+                        ID.unique(),
+                        result, 
+                    )
+                    const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}&mode=admin`;
+                    return res({url: fileURL, fileId: response.$id});
+                }
+                
+                // const file = bucket.file(fileName);
+                // file.createWriteStream().end(buffer)
+                // console.log("success");
+                // file.getSignedUrl({ action: 'read', expires: '03-09-2055' })
+                // .then((url) => {
+                //     console.log('Image URL:', url);
+                //     successCallback(url[0]);
+                // })
+                // .catch((error) => {
+                //     console.error('Error getting signed URL:', error);
+                // });
+            } catch (error) {
+                console.log("error", error);
+                return rej({error})
+            }    
+        })
 
         function getExtensionFromMimeType(mimeType) {
             const mimeMap = {
@@ -747,6 +855,13 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                     }
                 );
                 const user = await users.get(response.documents[0].userId);
+                const profile = await databases.listDocuments(
+                    process.env.dbID,
+                    process.env.profileCollectID,
+                    [
+                        Query.equal("userId", userId)
+                    ]
+                )
                 if(fcmToken){
                     await adminInstance.messaging().send({
                         data: {
@@ -756,7 +871,7 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                         token: fcmToken,
                     });
                 }
-                res.send({ status: 1, message: `Login success`, data:  {...response, ...user, token: token}})
+                res.send({ status: 1, message: `Login success`, data:  {...response, ...user, ...profile.documents[0], token: token}})
             }else{
                 res.send({ status: 0, message: `Incorrect OTP`, data: null })
             }
