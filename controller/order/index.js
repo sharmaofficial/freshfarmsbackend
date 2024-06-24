@@ -570,3 +570,41 @@ exports.cancelOrder = async(req, res, next) => {
         return res.send({status: 0, message: `Error while updating order -${error.message}` , data: null})
     }
 }
+
+exports.calculateDeliveryCharges = async(req, res, next) => {
+    const warehouseLaLong = {
+        lat: 26.4725,
+        long: 74.4701
+    };
+    const chargesPerKilometer = 8;
+    try {
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the Earth in kilometers
+            const dLat = degreesToRadians(lat2 - lat1);
+            const dLon = degreesToRadians(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(degreesToRadians(lat1)) * Math.cos(degreesToRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c; // Distance in kilometers
+            return distance;
+        }
+        // Helper function to convert degrees to radians
+        function degreesToRadians(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        const {lat, long} = req.body;
+        if(!lat || !long){
+            return res.send({status: 0, message: `Latitude and Longitude are required to calculate delivery charges`, data: null})
+        }
+        const distance = calculateDistance(warehouseLaLong.lat, warehouseLaLong.long, lat, long);
+        console.log("distance", distance);
+        const deliveryCharges = distance * chargesPerKilometer;
+        return res.send({status: 1, message: ``, data: Number(Math.ceil(deliveryCharges).toFixed(0))})
+    } catch (error) {
+        return res.send({status: 0, message: `Soemthing went wrong - ${error.message}`, data: null})
+    }
+}
+
