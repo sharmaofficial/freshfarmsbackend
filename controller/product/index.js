@@ -59,22 +59,19 @@ exports.getProduct = async(req, res, next) => {
                 Query.equal('$id', [req.body.id])
             ]
         );
-        console.log("req.body.id", req.body.id);
-        console.log("data.documents[0].$id", data.documents[0].$id);
         if(data.total){
             const inventoryData = await databases.listDocuments(
                 process.env.dbId,
                 process.env.inventoryCollectID,
                 [
                     Query.equal('productId', [data.documents[0].$id]),
-                    Query.greaterThan('quantity', [10]),
+                    Query.greaterThan('quantity', [2]),
                 ]
             );
             let payload = {
                 inventory: inventoryData.documents,
                 productDetails: data.documents[0]
             }
-            console.log("payload", payload);
             res.send({status: 1, message: "Success", data: payload})
         }else{
             res.send({status: 0, message: "Product details not found", data: null})
