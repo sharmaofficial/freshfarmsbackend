@@ -572,11 +572,7 @@ exports.cancelOrder = async(req, res, next) => {
 }
 
 exports.calculateDeliveryCharges = async(req, res, next) => {
-    const warehouseLaLong = {
-        lat: 26.4725,
-        long: 74.4701
-    };
-    const chargesPerKilometer = 8;
+    const {warehouseLat, warehouseLong, OfficeLat, OfficeLong, chargesPerKilometerFromWarehouse, chargesPerKilometerFromOffice} = process.env;
     try {
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // Radius of the Earth in kilometers
@@ -596,12 +592,22 @@ exports.calculateDeliveryCharges = async(req, res, next) => {
         }
 
         const {lat, long} = req.body;
+
         if(!lat || !long){
             return res.send({status: 0, message: `Latitude and Longitude are required to calculate delivery charges`, data: null})
         }
-        const distance = calculateDistance(warehouseLaLong.lat, warehouseLaLong.long, lat, long);
-        console.log("distance", distance);
-        const deliveryCharges = distance * chargesPerKilometer;
+
+        const distance1 = calculateDistance(lat, long, warehouseLat, warehouseLong);
+        const distance2 = calculateDistance(lat, long, OfficeLat, OfficeLong);
+        let distance = 0;
+        const isCloseToWarehouse = distance1 < distance2;
+        if(isCloseToWarehouse){
+            distance = calculateDistance(warehouseLat, warehouseLong, lat, long);
+        }else{
+            distance = calculateDistance(OfficeLat, OfficeLong, lat, long);
+        }
+        const deliveryCharges = distance * (isCloseToWarehouse ? chargesPerKilometerFromWarehouse : chargesPerKilometerFromOffice);
+
         return res.send({status: 1, message: ``, data: Number(Math.ceil(deliveryCharges).toFixed(0))})
     } catch (error) {
         return res.send({status: 0, message: `Soemthing went wrong - ${error.message}`, data: null})
