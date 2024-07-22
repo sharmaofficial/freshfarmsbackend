@@ -32,24 +32,24 @@ const excludePaths = ['/register', '/login', '/admin/login', '/verifyPaymentHook
 app.use(verifyToken(excludePaths));
 app.use(Routes.getRouter, Routes.postRouter);
 
-mongoose.connect(url, 
-  {
-    useNewUrlParser: true, 
-    useUnifiedTopology: true, 
-    useFindAndModify: false,
-    autoIndex: true, 
-    useCreateIndex: true, 
-    useUnifiedTopology: true,
-    keepAlive: true,
-    poolSize: 10,
-    bufferMaxEntries: 0,
-    connectTimeoutMS: 10000,
-    socketTimeoutMS: 45000,
-    family: 4,
-  }, (err, db)=>{
-    console.log("database connection success");
-  if(err) console.log("error while connecting to mongo DB", err);
-});
+// mongoose.connect(url, 
+//   {
+//     useNewUrlParser: true, 
+//     useUnifiedTopology: true, 
+//     useFindAndModify: false,
+//     autoIndex: true, 
+//     useCreateIndex: true, 
+//     useUnifiedTopology: true,
+//     keepAlive: true,
+//     poolSize: 10,
+//     bufferMaxEntries: 0,
+//     connectTimeoutMS: 10000,
+//     socketTimeoutMS: 45000,
+//     family: 4,
+//   }, (err, db)=>{
+//     console.log("database connection success");
+//   if(err) console.log("error while connecting to mongo DB", err);
+// });
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)

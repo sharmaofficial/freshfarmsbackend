@@ -7,14 +7,18 @@ const orders = require('../../modal/order');
 const { ObjectId } = require('mongodb');
 const { account, users, databases, appwriteSDK, messaging, storage } = require('../../database');
 const { ID, Query, InputFile } = require('node-appwrite');
+const user = require('../../modal/user');
 
 let bucket = adminInstance.storage().bucket();
 
-exports.list = (req, res, next) => {
-    userSchema.find({}, (err, result) => {
-        if (err) throw err
-        res.send({ status: 1, message: 'User list fetched', data: result })
-    })
+exports.list = async(req, res, next) => {
+    try {
+       const response = await users.list();
+       return res.send({status: 1, message: `User list fetched`, data: response.users })
+    } catch (error) {
+        console.log("error", error);
+        return res.send({status: 0, message: error.message, data: null })
+    }
 }
 
 exports.add = (req, res, next) => {
@@ -764,22 +768,24 @@ exports.userUpdateAdmin = async (req, res, next) => {
 
 exports.updateUserStatusAdmin = async (req, res, next) => {
     try {
-        const userId = req.body.userId;
-        const update = {
-            $set: {
-                'data.isActive': req.body.isActive,
-            },
-        };
+        console.log(req.body);
+        const {userId, isActive} = req.body;
+        await users.updateStatus(userId, isActive);
+        // const update = {
+        //     $set: {
+        //         'data.isActive': req.body.isActive,
+        //     },
+        // };
     
-        const options = {
-            returnOriginal: false
-        };
-        const response = await userSchema.findOneAndUpdate({ _id: ObjectId(userId) }, update, options);
-        if (response) {
-            res.send({ status: 1, data: response, message: 'User updated' })
-        } else {
-            res.send({ status: 0, message: 'User not found' })
-        }
+        // const options = {
+        //     returnOriginal: false
+        // };
+        // const response = await userSchema.findOneAndUpdate({ _id: ObjectId(userId) }, update, options);
+        // if (response) {
+        //     res.send({ status: 1, data: response, message: 'User updated' })
+        // } else {
+        //     res.send({ status: 0, message: 'User not found' })
+        // }
     } catch (error) {
         console.log("error", error);
         res.send({ message: error.message })
@@ -798,6 +804,7 @@ exports.registerWithAppWrite =  async(req, res, next) => {
 exports.loginWithAppWrite = async(req, res, next) => {
     try {
         const {email} = req.body;
+        console.log("email", email);
         if(email){
             const user = await users.list(
                 [Query.equal("email", [email])]
@@ -850,6 +857,7 @@ exports.loginWithAppWrite = async(req, res, next) => {
 
 exports.verifyOtpWithAppWrite = async(req, res, next) => {
     try {
+        console.log(req.body);
         const {userId, otp, fcmToken} = req.body;
         if(userId && otp){
             const response = await databases.listDocuments(
@@ -886,11 +894,13 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                         token: fcmToken,
                     });
                 }
-                res.send({ status: 1, message: `Login success`, data:  {...response, ...user, ...profile.documents[0], token: token}})
+                return res.send({ status: 1, message: `Login success`, data:  {...response, ...user, ...profile.documents[0], token: token}})
             }else{
-                res.send({ status: 0, message: `Incorrect OTP`, data: null })
+                return res.send({ status: 0, message: `Incorrect OTP`, data: null })
             }
-        } 
+        } else {
+            return res.send({ status: 0, message: `Required fields missing`, data: null })
+        }
     } catch (error) {
         console.log(error);
         res.send({ status: 0, message: `Login failed - ${error.message}`, data: null })
