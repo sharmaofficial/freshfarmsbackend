@@ -1,14 +1,18 @@
 const inventory = require("../../modal/inventory");
 const packageTypeSchema = require("../../modal/packageType");
+const { databases } = require("../../database");
 const { getUniqueId } = require("../../utils");
 
 exports.getPackages = async(req, res, next) => {
     try {
-        const response = await packageTypeSchema.find({isActive: true});
-        if(response){
-            res.send({status: 1, message: 'Packages fetched', data: response});
+        const packages = await databases.listDocuments(
+            process.env.dbId,
+            process.env.packageCollectID,
+        )
+        if(packages.total){
+            return res.send({status: 1, message:'Packages list fetched', data: packages.documents});
         }else{
-            res.send({status: 1, message: 'Packages not found', data: null});
+            return res.send({status: 0, message:'No packages found', data: []});
         }
     } catch (error) {
         res.send({status: 0, message: `Error while fetching packages - ${error}`, data: null});

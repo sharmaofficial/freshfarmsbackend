@@ -1,7 +1,4 @@
 var mongoose = require('mongoose');
-const categoriesSchema = require("../../modal/categories");
-const inventorySchema = require("../../modal/inventory")
-const packageTypeSchema = require("../../modal/packageType")
 const productSchema = require("../../modal/product");
 const { adminInstance, getUniqueId } = require("../../utils");
 const { databases } = require('../../database');
@@ -36,15 +33,36 @@ exports.getProducts = async(req, res, next) => {
 
 exports.getAllProductsForAdmin = async(req, res, next) => {
     try {
-        const response = await productSchema.find({});
-        const categoryResponse = await categoriesSchema.find({});
-        if(response){
-            res.send({status: 1, message:'Product list fetched', data: {products: response, categories: categoryResponse}});
-        }else{
-            res.send({status: 0, message:'No Product Found', data: null});
-        }
+        // const {categoryId} = req.body;
+        // if(!categoryId){
+        //     res.send({status: 0, message:'Please send category id in api body', data: []})
+        // }else{
+            const response = {
+                categories:[],
+                products: []
+            };
+            const categories = await databases.listDocuments(
+                process.env.dbId,
+                process.env.categoriesCollectID,
+            );
+            if(!categories.total){
+                return res.send({status: 0, message: `No categories found`, data: response});
+            }
+            const products = await databases.listDocuments(
+                process.env.dbId,
+                process.env.productsCollectID,
+            );
+            if(products.total){
+                response.categories.push(...categories.documents);
+                response.products.push(...products.documents);
+                console.log("response", response);
+                return res.send({status: 1, message: `products fetched`, data: response});
+            }else{
+                return res.send({status: 0, message: `No products found`, data: response});
+            }
+        // }
     } catch (error) {
-        res.send({status: 0, message:`Error in Product list fetching - ${error}`, data: null})
+        return res.send({status: 0, message: `something went wrong !! - ${error.message}`, data: null})
     }
 }
 

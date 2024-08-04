@@ -16,11 +16,14 @@ Cashfree.XEnvironment = Cashfree.Environment.SANDBOX;
 
 exports.getOrders = async(req, res, next) => {
     try {
-        const response = await ordersSchema.find({});
-        if(response){
-            res.send({status: 1, message:'Orders list fetched', data: response});
+        const orders = await databases.listDocuments(
+            process.env.dbId,
+            process.env.orderCollectID,
+        )
+        if(orders.total){
+            return res.send({status: 1, message:'Orders list fetched', data: orders.documents});
         }else{
-            res.send({status: 0, message:'No order found', data: null});
+            return res.send({status: 0, message:'No orders found', data: []});
         }
     } catch (error) {
         res.send({status: 0, message: `Error while fetching orders - ${error}`, data: null});

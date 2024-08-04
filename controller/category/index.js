@@ -24,11 +24,20 @@ exports.getCategories = async(req, res, next) => {
     }
 };
 
-exports.getCategoriesForAdmin = (req, res, next) => {
-    categoriySchema.find({}, (err, result) => {
-        if (err) throw err
-        res.send({ status: 1, message: 'Categories list fetched', data: result })
-    })
+exports.getCategoriesForAdmin = async(req, res, next) => {
+    try {
+        const categories = await databases.listDocuments(
+            process.env.dbId,
+            process.env.categoriesCollectID,
+        );
+        if(categories.total){
+            return res.send({status: 1, message: `category fetched successfully`, data: categories})
+        }else{
+            return res.send({status: 0, message: `No categories found`, data: []})
+        }
+    } catch (error) {
+        return res.send({status: 0, message: `something went wrong !! - ${error.message}`, data: null})
+    }
 };
 
 exports.addCategory = async(req, res, next) => {
