@@ -9,10 +9,16 @@ const { Cashfree } = require("cashfree-pg");
 const { ObjectId } = require("mongodb");
 const { databases } = require("../../database");
 const { ID, Query } = require("node-appwrite");
+const Razorpay = require("razorpay");
 
 Cashfree.XClientId = process.env.XClientId;
 Cashfree.XClientSecret = process.env.XClientSecret;
 Cashfree.XEnvironment = Cashfree.Environment.SANDBOX;
+
+const razorpayInstance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 exports.getOrders = async(req, res, next) => {
     try {
@@ -70,32 +76,82 @@ exports.getOrderStatus = async(req, res, next) => {
 }
 
 exports.createOrder = async(req, res, next) => {
-    const createCFOrderId = (request, successCallback, errorCallback) => {
-        // let request = {
-        //     order_amount: 1,
-        //     order_currency: "INR",
-        //     order_id: orderId,
-        //     customer_details: {
-        //         customer_id: "walterwNrcMi",
-        //         customer_phone: "9999999999"
-        //     },
-        //     order_meta: {
-        //         return_url: `https://www.cashfree.com/devstudio/preview/pg/web/checkout?order_id=${orderId}`
-        //     }
-        // };
-        // console.log("request", request);
-        Cashfree.PGCreateOrder("2022-09-01", request).then((response) => {
-            console.log('Order Created successfully:',response.data)
-            successCallback(response.data);
-        }).catch((error) => {
-            console.error('Error:', error);
-            errorCallback(error);
-        });
-    }
+    // const createCFOrderId = (request, successCallback, errorCallback) => {
+    //     // let request = {
+    //     //     order_amount: 1,
+    //     //     order_currency: "INR",
+    //     //     order_id: orderId,
+    //     //     customer_details: {
+    //     //         customer_id: "walterwNrcMi",
+    //     //         customer_phone: "9999999999"
+    //     //     },
+    //     //     order_meta: {
+    //     //         return_url: `https://www.cashfree.com/devstudio/preview/pg/web/checkout?order_id=${orderId}`
+    //     //     }
+    //     // };
+    //     // console.log("request", request);
+    //     Cashfree.PGCreateOrder("2022-09-01", request).then((response) => {
+    //         console.log('Order Created successfully:',response.data)
+    //         successCallback(response.data);
+    //     }).catch((error) => {
+    //         console.error('Error:', error);
+    //         errorCallback(error);
+    //     });
+    // }
+
+    // try {
+    //     const orderId = getUniqueId();
+    //     const address = JSON.parse(req.body?.address)
+    //     let payload = {
+    //         ...req.body,
+    //         orderId: orderId,
+    //         isPaid: false,
+    //         orderStatus: 'Processing',
+    //         userId: req.userId,
+    //         updatedAt: new Date(),
+    //         dateTime: new Date()
+    //     }
+    //     console.log("payload", payload);
+    //     await databases.createDocument(
+    //         process.env.dbId,
+    //         process.env.orderCollectID,
+    //         ID.unique(),
+    //         {
+    //             ...payload
+    //         }
+    //     )
+    //     createCFOrderId(
+    //         {
+    //             order_id: orderId,
+    //             order_amount: req.body.totalAmout,
+    //             order_currency: "INR",
+    //             customer_details: {
+    //                 customer_id: req.userId,
+    //                 customer_phone: address?.contactNumber.toString() || "",
+    //                 customer_name: address?.name || ""
+    //             }
+    //         },
+    //         (response) => {
+    //             res.send({status: 1, message:'Orders Created', data: response});
+    //         },
+    //         error => {
+    //             res.send({status: 0, message:'Orders Creation failed - ' + error.message, data: null});
+    //         }
+    //     )
+    // } catch (error) {
+    //     console.log("error", error);
+    //     res.send({status: 0, message: `Orders creation failed - ${error.message}` , data: null});
+    // }
 
     try {
+        console.log("req.body", req.body);
+        const { totalAmout, userId } = req.body;
+        const options = {
+          amount: totalAmout * 100, // Convert amount to paise
+          currency: 'INR',
+          customer_id: userId
+        };
         const orderId = getUniqueId();
-        const address = JSON.parse(req.body?.address)
         let payload = {
             ...req.body,
             orderId: orderId,
@@ -105,8 +161,7 @@ exports.createOrder = async(req, res, next) => {
             updatedAt: new Date(),
             dateTime: new Date()
         }
-        console.log("payload", payload);
-        await databases.createDocument(
+        const order = await databases.createDocument(
             process.env.dbId,
             process.env.orderCollectID,
             ID.unique(),
@@ -114,202 +169,285 @@ exports.createOrder = async(req, res, next) => {
                 ...payload
             }
         )
-        createCFOrderId(
-            {
-                order_id: orderId,
-                order_amount: req.body.totalAmout,
-                order_currency: "INR",
-                customer_details: {
-                    customer_id: req.userId,
-                    customer_phone: address?.contactNumber.toString() || "",
-                    customer_name: address?.name || ""
-                }
-            },
-            (response) => {
-                res.send({status: 1, message:'Orders Created', data: response});
-            },
-            error => {
-                res.send({status: 0, message:'Orders Creation failed - ' + error.message, data: null});
-            }
-        )
+        const response = await razorpayInstance.orders.create({...options});
+        return res.send({message: `Order created succefully`, status: 1, data: {...response, razorpay_key: process.env.RAZORPAY_KEY, documentId: order.$id}});
     } catch (error) {
         console.log("error", error);
-        res.send({status: 0, message: `Orders creation failed - ${error.message}` , data: null});
+        return res.send({message: `Order creation failed - ${error.message}`, status: 0, data: null});
     }
-    
-    // ordersSchema.create({...payload},(err, result)=>{
-    //     if(err)throw err
-    //     // res.send({status: 1, message:'Orders Created', data: result});
-    //     createCFOrderId(
-    //         {
-    //             order_id: orderId,
-    //             order_amount: req.body.totalAmout,
-    //             order_currency: "INR",
-    //             customer_details: {
-    //                 customer_id: req.userId,
-    //                 customer_phone: req.body?.address?.phoneNumber || "",
-    //                 customer_name: req.body?.address?.name || ""
-    //             }
-    //         },
-    //         (response) => {
-    //             res.send({status: 1, message:'Orders Created', data: response});
-    //         },
-    //         async () => {
-    //             const condition = {
-    //                 'orderId': orderId, // Match the package with a specific id
-    //             };
-              
-    //             const update = {
-    //                 $set: {
-    //                     'orderStatus': "Terminated due to payment failure", // Use $ to identify the matched array element
-    //                 },
-    //             };
-    //             await ordersSchema.findOneAndUpdate(condition, update, {new: true})
-    //             res.send({status: 0, message:'Error while placing order', data: null});
-    //     })
-    //     // updateInventory(payload.orderId)
-    // });
 }
 
 exports.verifyOrder = async(req, res, next) => {
-    Cashfree.PGFetchOrder("2022-09-01", req.body.orderId).then(async (response) => {
-        const orderId = req.body.orderId
-        if(response.data.order_status === 'PAID'){
-            const transaction = await databases.createDocument(
-                process.env.dbId,
-                process.env.transactionCollectID,
-                ID.unique(),
-                {
-                    transactionDetails: JSON.stringify({
-                        ...response.data
-                    })
-                }
-            )
-            const order = await databases.listDocuments(
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, options, documentId } = req.body;
+
+  const secret = razorpayInstance.key_secret;
+  const body = razorpay_order_id + '|' + razorpay_payment_id;
+
+  console.log("req.body", req.body);
+
+  try {
+    const isValidSignature = Razorpay.validateWebhookSignature(body, razorpay_signature, secret);
+    console.log("isValidSignature", isValidSignature);
+    if (isValidSignature) {
+        const transaction = await databases.createDocument(
+            process.env.dbId,
+            process.env.transactionCollectID,
+            ID.unique(),
+            {
+                transactionDetails: JSON.stringify({
+                    ...options
+                })
+            }
+        )
+        const order = await databases.listDocuments(
+            process.env.dbId,
+            process.env.orderCollectID,
+            [
+                Query.equal("$id", [documentId])
+            ]
+        )
+        if(order.total){
+            await databases.updateDocument(
                 process.env.dbId,
                 process.env.orderCollectID,
-                [
-                    Query.equal("orderId", [orderId])
-                ]
-            )
-            if(order.total){
-                await databases.updateDocument(
+                order.documents[0].$id,
+                {
+                    transactionId: transaction.$id,
+                    isPaid: true
+
+                }
+            );
+            const products = JSON.parse(order.documents[0].products)
+            products.forEach(async product => {
+                const invetory = await databases.listDocuments(
                     process.env.dbId,
-                    process.env.orderCollectID,
-                    order.documents[0].$id,
-                    {
-                        transactionId: transaction.$id,
-                        isPaid: true
-
-                    }
-                );
-                const products = JSON.parse(order.documents[0].products)
-                products.forEach(async product => {
-                    const invetory = await databases.listDocuments(
-                        process.env.dbId,
-                        process.env.inventoryCollectID,
-                        [
-                            Query.equal("productId", product.$id)
-                        ]
-                    )
-                    const {quantity} = product;
-                    const {quantity: currentQuantity} = invetory.documents[0]
-
-                    let updateQuantity = Number(currentQuantity)-Number(quantity);
-
-                    await databases.updateDocument(
-                        process.env.dbId,
-                        process.env.inventoryCollectID,
-                        invetory.documents[0].$id,
-                        {
-                            quantity: Number(updateQuantity)
-                        }
-                    );
-                    await databases.createDocument(
-                        process.env.dbId,
-                        process.env.inventoryCollectID,
-                        ID.unique(),
-                        {
-                            orderId: order.documents[0].$id,
-                            createdAt: new Date(),
-                            orderType: 'SELL'
-                        }
-                    )
-                });
-                
-                //SEND Notification to app using firebase messaging
-                const userDetails = await databases.listDocuments(
-                    process.env.dbId,
-                    process.env.tokenCollectID,
+                    process.env.inventoryCollectID,
                     [
-                        Query.equal("userId", order.documents[0].userId)
+                        Query.equal("productId", product.$id)
                     ]
                 )
-                if(userDetails.documents[0]?.fcmToken){
-                    await adminInstance.messaging().send({
-                        data: {
-                          title: `Order Placed Successfully !`,
-                          body: `Order is placed and in processing, hang tight we will deliver it soon !
-                                \n Your Order id is: ${orderId}`,
-                        },
-                        token: userDetails.documents[0]?.fcmToken,
-                    });
-                }
-                res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
-            }else{
-                res.send({status: 0, message:'Order not found', data: null})
-            }
-            // const condition = {
-            //     'orderId': orderId,
-            // };
-            // const update = {
-            //     $set: {
-            //         'isPaid': true,
-            //         'paymentDetails': {...response.data},
-            //         // 'orderStatus': response.data.order_status
-            //     },
-            // };
-            // await ordersSchema.findOneAndUpdate(condition, update, { new: true });
-            // updateInventory(orderId, res, req, (error) => {
-            //     res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
-            // });
-        }else{
-            const transaction = await databases.createDocument(
-                process.env.dbId,
-                process.env.transactionCollectID,
-                ID.unique(),
-                {
-                    transactionDetails: JSON.stringify({
-                        ...response.data
-                    })
-                }
-            )
-            const order = await databases.listDocuments(
-                process.env.dbId,
-                process.env.orderCollectID,
-                [
-                    Query.equal("orderId", [req.body.orderId])
-                ]
-            )
-            if(order.total){
+                const {quantity} = product;
+                const {quantity: currentQuantity} = invetory.documents[0]
+
+                let updateQuantity = Number(currentQuantity)-Number(quantity);
+
                 await databases.updateDocument(
                     process.env.dbId,
-                    process.env.orderCollectID,
-                    order.documents[0].$id,
+                    process.env.inventoryCollectID,
+                    invetory.documents[0].$id,
                     {
-                        transactionId: transaction.$id,
-                        isPaid: false
+                        quantity: Number(updateQuantity)
                     }
                 );
-                res.send({status: 1, message:'Orders payment pending', data: response.data});
-            }else{
-                res.send({status: 0, message:'Order not found', data: null})
+                await databases.createDocument(
+                    process.env.dbId,
+                    process.env.inventoryLogCollectID,
+                    ID.unique(),
+                    {
+                        orderId: order.documents[0].$id,
+                        createdAt: new Date(),
+                        orderType: 'SELL'
+                    }
+                )
+            });
+            
+            //SEND Notification to app using firebase messaging
+            const userDetails = await databases.listDocuments(
+                process.env.dbId,
+                process.env.tokenCollectID,
+                [
+                    Query.equal("userId", order.documents[0].userId)
+                ]
+            )
+            if(userDetails.documents[0]?.fcmToken){
+                await adminInstance.messaging().send({
+                    data: {
+                      title: `Order Placed Successfully !`,
+                      body: `Order is placed and in processing, hang tight we will deliver it soon !
+                            \n Your Order id is: ${order.documents[0].$id}`,
+                    },
+                    token: userDetails.documents[0]?.fcmToken,
+                });
             }
+            res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
+        }else{
+            return res.send({status: 0, message:'Order not found', data: null})
         }
-    }).catch((error) => {
-        console.error('Error:', error);
-        res.send({status: 0, message:'Error while verifying order payment', data: null});
-    });
+    } else {
+        const transaction = await databases.createDocument(
+            process.env.dbId,
+            process.env.transactionCollectID,
+            ID.unique(),
+            {
+                transactionDetails: JSON.stringify({
+                    ...options
+                })
+            }
+        )
+        const order = await databases.listDocuments(
+            process.env.dbId,
+            process.env.orderCollectID,
+            [
+                Query.equal("$id", [documentId])
+            ]
+        )
+        if(order.total){
+            await databases.updateDocument(
+                process.env.dbId,
+                process.env.orderCollectID,
+                order.documents[0].$id,
+                {
+                    transactionId: transaction.$id,
+                    isPaid: false
+                }
+            );
+            res.send({status: 0, message:'Payment verification failed', data:  order.documents[0].orderId});
+        }else{
+            return res.send({status: 0, message:'Order not found', data: null})
+        }
+    }
+  } catch (error) {
+    console.error(error);
+    return res.send({status: 0, message:'Payment verification failed', data: null})
+  }
+    // Cashfree.PGFetchOrder("2022-09-01", req.body.orderId).then(async (response) => {
+    //     const orderId = req.body.orderId
+    //     if(response.data.order_status === 'PAID'){
+    //         const transaction = await databases.createDocument(
+    //             process.env.dbId,
+    //             process.env.transactionCollectID,
+    //             ID.unique(),
+    //             {
+    //                 transactionDetails: JSON.stringify({
+    //                     ...response.data
+    //                 })
+    //             }
+    //         )
+    //         const order = await databases.listDocuments(
+    //             process.env.dbId,
+    //             process.env.orderCollectID,
+    //             [
+    //                 Query.equal("orderId", [orderId])
+    //             ]
+    //         )
+    //         if(order.total){
+    //             await databases.updateDocument(
+    //                 process.env.dbId,
+    //                 process.env.orderCollectID,
+    //                 order.documents[0].$id,
+    //                 {
+    //                     transactionId: transaction.$id,
+    //                     isPaid: true
+
+    //                 }
+    //             );
+    //             const products = JSON.parse(order.documents[0].products)
+    //             products.forEach(async product => {
+    //                 const invetory = await databases.listDocuments(
+    //                     process.env.dbId,
+    //                     process.env.inventoryCollectID,
+    //                     [
+    //                         Query.equal("productId", product.$id)
+    //                     ]
+    //                 )
+    //                 const {quantity} = product;
+    //                 const {quantity: currentQuantity} = invetory.documents[0]
+
+    //                 let updateQuantity = Number(currentQuantity)-Number(quantity);
+
+    //                 await databases.updateDocument(
+    //                     process.env.dbId,
+    //                     process.env.inventoryCollectID,
+    //                     invetory.documents[0].$id,
+    //                     {
+    //                         quantity: Number(updateQuantity)
+    //                     }
+    //                 );
+    //                 await databases.createDocument(
+    //                     process.env.dbId,
+    //                     process.env.inventoryCollectID,
+    //                     ID.unique(),
+    //                     {
+    //                         orderId: order.documents[0].$id,
+    //                         createdAt: new Date(),
+    //                         orderType: 'SELL'
+    //                     }
+    //                 )
+    //             });
+                
+    //             //SEND Notification to app using firebase messaging
+    //             const userDetails = await databases.listDocuments(
+    //                 process.env.dbId,
+    //                 process.env.tokenCollectID,
+    //                 [
+    //                     Query.equal("userId", order.documents[0].userId)
+    //                 ]
+    //             )
+    //             if(userDetails.documents[0]?.fcmToken){
+    //                 await adminInstance.messaging().send({
+    //                     data: {
+    //                       title: `Order Placed Successfully !`,
+    //                       body: `Order is placed and in processing, hang tight we will deliver it soon !
+    //                             \n Your Order id is: ${orderId}`,
+    //                     },
+    //                     token: userDetails.documents[0]?.fcmToken,
+    //                 });
+    //             }
+    //             res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
+    //         }else{
+    //             res.send({status: 0, message:'Order not found', data: null})
+    //         }
+    //         // const condition = {
+    //         //     'orderId': orderId,
+    //         // };
+    //         // const update = {
+    //         //     $set: {
+    //         //         'isPaid': true,
+    //         //         'paymentDetails': {...response.data},
+    //         //         // 'orderStatus': response.data.order_status
+    //         //     },
+    //         // };
+    //         // await ordersSchema.findOneAndUpdate(condition, update, { new: true });
+    //         // updateInventory(orderId, res, req, (error) => {
+    //         //     res.send({status: 0, message:'Error while updating inventory', data: null, error: error})
+    //         // });
+    //     }else{
+    //         const transaction = await databases.createDocument(
+    //             process.env.dbId,
+    //             process.env.transactionCollectID,
+    //             ID.unique(),
+    //             {
+    //                 transactionDetails: JSON.stringify({
+    //                     ...response.data
+    //                 })
+    //             }
+    //         )
+    //         const order = await databases.listDocuments(
+    //             process.env.dbId,
+    //             process.env.orderCollectID,
+    //             [
+    //                 Query.equal("orderId", [req.body.orderId])
+    //             ]
+    //         )
+    //         if(order.total){
+    //             await databases.updateDocument(
+    //                 process.env.dbId,
+    //                 process.env.orderCollectID,
+    //                 order.documents[0].$id,
+    //                 {
+    //                     transactionId: transaction.$id,
+    //                     isPaid: false
+    //                 }
+    //             );
+    //             res.send({status: 1, message:'Orders payment pending', data: response.data});
+    //         }else{
+    //             res.send({status: 0, message:'Order not found', data: null})
+    //         }
+    //     }
+    // }).catch((error) => {
+    //     console.error('Error:', error);
+    //     res.send({status: 0, message:'Error while verifying order payment', data: null});
+    // });
 }
 
 const updateInventory = async(orderId, res, req, errorCallback) => {

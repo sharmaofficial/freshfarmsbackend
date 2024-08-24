@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 const orders = require('../../modal/order');
 const { ObjectId } = require('mongodb');
 const { account, users, databases, appwriteSDK, messaging, storage } = require('../../database');
-const { ID, Query, InputFile } = require('node-appwrite');
+const { ID, Query, InputFile, ImageGravity, ImageFormat } = require('node-appwrite');
 const user = require('../../modal/user');
 
 let bucket = adminInstance.storage().bucket();
@@ -213,19 +213,15 @@ exports.update = async (req, res, next) => {
                     //     const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}&mode=admin`;
                     //     return res({url: fileURL, fileId: response.$id});
                     // }else{
-                        console.log("File Not Found");
+                        // console.log("File Not Found");
                         const response = await storage.createFile(
                             process.env.bucketID,
                             ID.unique(),
                             result, 
                         );
-                        const fileResponse = await storage.getFile(
-                            process.env.bucketID,
-                            response.$id,
-                        );
-                        
-                        const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}&mode=admin`;
-                        return res({url: fileURL, fileId: response.$id});
+                        // return `data:image/jpeg;base64,${base64String}`;
+                        // const fileURL = `https://cloud.appwrite.io/v1/storage/buckets/${process.env.bucketID}/files/${response.$id}/view?project=${process.env.projectID}`;
+                        return res({url: `data:image/jpeg;base64,${req.body.image.base64}`, fileId: response.$id});
                     // }
                 // }else{
                 //     console.log("Profile Not Found");
@@ -278,25 +274,42 @@ exports.update = async (req, res, next) => {
 
 exports.addAddress = async (req, res, next) => {
     try {
-        // req.body.addresses
-        const addressResponse = await databases.createDocument(
-            process.env.dbID,
-            process.env.addressCollectID,
-            ID.unique(),
-            {
-                ...req.body.addresses
+        const BOUNDS = {
+            minLat: process.env.warehouseLat,
+            maxLat: process.env.lastLocationLat,
+            minLng: process.env.warehouseLong,
+            maxLng: process.env.lastLocationLong,
+        };
+
+        // const {latitude, longitude} = req.body.addresses;
+        // console.log("latitude < BOUNDS.minLat", latitude < BOUNDS.minLat);
+        // console.log("latitude > BOUNDS.maxLat", latitude > BOUNDS.maxLat);
+        // console.log("longitude < BOUNDS.minLng", longitude < BOUNDS.minLng);
+        // console.log("longitude > BOUNDS.maxLng", longitude > BOUNDS.maxLng);
+        // if (latitude < BOUNDS.minLat || latitude > BOUNDS.maxLat || longitude < BOUNDS.minLng || longitude > BOUNDS.maxLng) {
+        //     // alert("You have moved out of the allowed area.");
+        //     // Optionally, reset to a valid region or bring the user back within bounds
+        //     return res.send({ status: 0, data: null, message: 'You have moved out of the allowed area.'});
+        // } else {
+            const addressResponse = await databases.createDocument(
+                process.env.dbID,
+                process.env.addressCollectID,
+                ID.unique(),
+                {
+                    ...req.body.addresses
+                }
+            );
+            const addressesList= await databases.listDocuments(
+                process.env.dbID,
+                process.env.addressCollectID
+            );
+            for (const doc of addressesList.documents) {
+                if (doc.$id !== addressResponse.$id) {
+                    await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
+                }
             }
-        );
-        const addressesList= await databases.listDocuments(
-            process.env.dbID,
-            process.env.addressCollectID
-        );
-        for (const doc of addressesList.documents) {
-            if (doc.$id !== addressResponse.$id) {
-                await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
-            }
-        }
-        res.send({ status: 1, data: addressResponse, message: 'User updated' });
+            return res.send({ status: 1, data: addressResponse, message: 'User updated' });
+        // }
         // const response = await userSchema.find({_id: req.userId});
         // if (response) {
         //     getUpdateAddress(
@@ -661,7 +674,8 @@ exports.myOrders = async (req, res, next) => {
             process.env.dbID,
             process.env.orderCollectID,
             [
-                Query.equal('userId', [userId])
+                Query.equal('userId', [userId]),
+                Query.limit(1000),
             ]
         )
     res.json({ status: 1, data: user.documents, message: 'Order fetched'});
