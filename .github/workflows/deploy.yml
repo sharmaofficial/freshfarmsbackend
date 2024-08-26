@@ -1,0 +1,23 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.freshfarms-digitaloceanSSH-key }}
+
+    - name: Deploy code to VPS
+      run: |
+        ssh root@146.190.11.0 'cd /freshfarmsbackend && git pull origin dev && yarn && pm2 restart all'
