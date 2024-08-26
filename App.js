@@ -2,8 +2,11 @@ const express = require('express')
 var mongoose = require('mongoose')
 var bodyParser = require('body-parser');
 const dotenv = require('dotenv')
-dotenv.config();
+const result = dotenv.config({path: './.env'});
 
+if (result.error) {
+  throw result.error;
+}
 const url = `mongodb+srv://${process.env.dbUsername}:${process.env.dbPassword}${process.env.dbURL}?retryWrites=true&w=majority`
 const app = express();
 
