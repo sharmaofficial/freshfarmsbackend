@@ -27,7 +27,7 @@ name: Debug SSH Connection
 on:
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   debug-ssh:

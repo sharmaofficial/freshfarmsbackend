@@ -113,8 +113,8 @@ exports.getPrivacypolicy = async(req, res, next) => {
                 <h2>8. Contact Us</h2>
                 <p>If you have any questions about this privacy policy, please contact us at:</p>
                 <div class="contact-info">
-                <p>Email: [Your Email Address]</p>
-                <p>Address: [Your Mailing Address]</p>
+                <p>Email: sharma.official12@gmail.com</p>
+                <p>Address: Ajmer</p>
                 </div>
             </div>
             </body>
