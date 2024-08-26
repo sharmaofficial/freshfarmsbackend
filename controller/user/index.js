@@ -68,7 +68,7 @@ exports.update = async (req, res, next) => {
             const {url, fileId} = await uploadImageToFirebaseAndReturnURL(req);
             console.log("result", url, fileId);
             const profileDetails = await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.profileCollectID,
                 [
                     Query.equal("userId", userId)
@@ -78,7 +78,7 @@ exports.update = async (req, res, next) => {
             if(profileDetails.total){
                 console.log("Profile Found");
                 await databases.updateDocument(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.profileCollectID,
                     profileDetails.documents[0].$id,
                     {
@@ -90,7 +90,7 @@ exports.update = async (req, res, next) => {
             }else{
                 console.log("Profile Not Found");
                 await databases.createDocument(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.profileCollectID,
                     ID.unique(),
                     {
@@ -107,7 +107,7 @@ exports.update = async (req, res, next) => {
             //         console.log("fileId", fileId);
             //         try {
             //             const profileDetails = await databases.listDocuments(
-            //                 process.env.dbID,
+            //                 process.env.dbId,
             //                 process.env.profileCollectID,
             //                 [
             //                     Query.equal("userId", userId)
@@ -115,7 +115,7 @@ exports.update = async (req, res, next) => {
             //             );
             //             if(profileDetails.total){
             //                 await databases.updateDocument(
-            //                     process.env.dbID,
+            //                     process.env.dbId,
             //                     process.env.profileCollectID,
             //                     profileDetails.documents[0].$id,
             //                     {
@@ -125,7 +125,7 @@ exports.update = async (req, res, next) => {
             //                 )
             //             }else{
             //                 await databases.createDocument(
-            //                     process.env.dbID,
+            //                     process.env.dbId,
             //                     process.env.profileCollectID,
             //                     ID.unique(),
             //                     {
@@ -152,7 +152,7 @@ exports.update = async (req, res, next) => {
             }
             const userDetails = await users.get(userId);
             const profile = await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.profileCollectID,
                 [
                     Query.equal("userId", userId)
@@ -171,7 +171,7 @@ exports.update = async (req, res, next) => {
             }
             const userDetails = await users.get(userId);
             const profile = await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.profileCollectID,
                 [
                     Query.equal("userId", userId)
@@ -191,7 +191,7 @@ exports.update = async (req, res, next) => {
                 const fileName = `user_profile_picture_${req.userId}_${ID.unique()}` + getExtensionFromMimeType(req.body.image.type); // Replace with your desired file path and name
                 const result = InputFile.fromBuffer(buffer, fileName);
                 // const profileDetails = await databases.listDocuments(
-                //     process.env.dbID,
+                //     process.env.dbId,
                 //     process.env.profileCollectID,
                 //     [
                 //         Query.equal("userId", req.userId)
@@ -292,7 +292,7 @@ exports.addAddress = async (req, res, next) => {
         //     return res.send({ status: 0, data: null, message: 'You have moved out of the allowed area.'});
         // } else {
             const addressResponse = await databases.createDocument(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.addressCollectID,
                 ID.unique(),
                 {
@@ -300,12 +300,12 @@ exports.addAddress = async (req, res, next) => {
                 }
             );
             const addressesList= await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.addressCollectID
             );
             for (const doc of addressesList.documents) {
                 if (doc.$id !== addressResponse.$id) {
-                    await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
+                    await databases.updateDocument(process.env.dbId, process.env.addressCollectID, doc.$id, { isDefault: false });
                 }
             }
             return res.send({ status: 1, data: addressResponse, message: 'User updated' });
@@ -407,7 +407,7 @@ exports.markDefaultAddress = async (req, res, next) => {
     try {
         const addressId = req.body.id;
         await databases.updateDocument(
-            process.env.dbID,
+            process.env.dbId,
             process.env.addressCollectID,
             addressId,
             {
@@ -415,12 +415,12 @@ exports.markDefaultAddress = async (req, res, next) => {
             }
         );
         const addressesList= await databases.listDocuments(
-            process.env.dbID,
+            process.env.dbId,
             process.env.addressCollectID
         );
         for (const doc of addressesList.documents) {
             if (doc.$id !== addressId) {
-                await databases.updateDocument(process.env.dbID, process.env.addressCollectID, doc.$id, { isDefault: false });
+                await databases.updateDocument(process.env.dbId, process.env.addressCollectID, doc.$id, { isDefault: false });
             }
         }
         res.send({ status: 1, data: addressesList.documents, message: 'User updated' });
@@ -671,7 +671,7 @@ exports.myOrders = async (req, res, next) => {
     console.log("userId", userId);
     try {
         const user = await databases.listDocuments(
-            process.env.dbID,
+            process.env.dbId,
             process.env.orderCollectID,
             [
                 Query.equal('userId', [userId]),
@@ -827,14 +827,14 @@ exports.loginWithAppWrite = async(req, res, next) => {
             if(user.total){
                 const response = await account.createEmailToken(user.users[0].$id, email);
                 const tokenCollection = await databases.listDocuments(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.tokenCollectID,
                     [Query.equal("userId", [user.users[0].$id])]
                 );
                 console.log(tokenCollection);
                 if(tokenCollection.total){
                     await databases.updateDocument(
-                        process.env.dbID,
+                        process.env.dbId,
                         process.env.tokenCollectID,
                         tokenCollection.documents[0].$id,
                         {
@@ -851,7 +851,7 @@ exports.loginWithAppWrite = async(req, res, next) => {
                 );
                 const response = await account.createEmailToken(user.$id, user.email);
                 await databases.createDocument(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.tokenCollectID,
                     ID.unique(),
                     {
@@ -875,14 +875,14 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
         const {userId, otp, fcmToken} = req.body;
         if(userId && otp){
             const response = await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.tokenCollectID,
                 [Query.equal("otp", [otp])]
             );
             if(response.total){
                 const token = jwt.sign({ userId: userId }, 'freshfarmsJWT');
                 await databases.updateDocument(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.tokenCollectID,
                     response.documents[0].$id,
                     {
@@ -893,7 +893,7 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                 );
                 const user = await users.get(response.documents[0].userId);
                 const profile = await databases.listDocuments(
-                    process.env.dbID,
+                    process.env.dbId,
                     process.env.profileCollectID,
                     [
                         Query.equal("userId", userId)
@@ -925,7 +925,7 @@ exports.getAddresses = async(req, res, next) => {
     const {userId} = req;
     try {
         const response = await databases.listDocuments(
-            process.env.dbID,
+            process.env.dbId,
             process.env.tokenCollectID,
             [
                 Query.equal("userId", [userId])
@@ -934,7 +934,7 @@ exports.getAddresses = async(req, res, next) => {
         if(response.total){
             const tokenId = response.documents[0].$id;
             const addresses = await databases.listDocuments(
-                process.env.dbID,
+                process.env.dbId,
                 process.env.addressCollectID,
                 [
                     Query.equal("user", [tokenId])
