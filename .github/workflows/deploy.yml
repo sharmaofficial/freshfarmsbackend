@@ -16,7 +16,7 @@ jobs:
     - name: Install SSH key
       uses: webfactory/ssh-agent@v0.7.0
       with:
-        ssh-private-key: ${{ secrets.freshfarms-digitaloceanSSH-key }}
+        ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
 
     - name: Deploy code to VPS
       run: |
