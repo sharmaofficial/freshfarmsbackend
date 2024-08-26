@@ -5,14 +5,13 @@ exports.getPrivacypolicy = async(req, res, next) => {
         const user = await users.get(
             req.userId
         );
-        console.log("user", user);
         const htmlContent = `
         <!DOCTYPE html>
             <html lang="en">
             <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Privacy Policy - My E-Commerce App</title>
+            <title>Privacy Policy - Fresh Farms Ajmer</title>
             <style>
                 body {
                 font-family: Arial, sans-serif;
@@ -60,10 +59,10 @@ exports.getPrivacypolicy = async(req, res, next) => {
             <body>
             <div class="container">
                 <h1>Privacy Policy</h1>
-                <p>Last updated: [Date]</p>
+                <p>Last updated: 26/08/2024</p>
 
                 <h2>1. Introduction</h2>
-                <p>Welcome to My E-Commerce App. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy policy, or our practices with regards to your personal information, please contact us at [Your Contact Information].</p>
+                <p>Welcome to Fresh Farms Ajmer. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy policy, or our practices with regards to your personal information, please contact us at [Your Contact Information].</p>
 
                 <h2>2. Information We Collect</h2>
                 <h3>2.1 Personal Information</h3>
