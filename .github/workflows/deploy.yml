@@ -71,6 +71,6 @@ jobs:
           cd freshfarmsbackend || exit
           git pull origin dev
           yarn install
-          pm2 restart all
+          pm2 restart App
           exit
         EOF
