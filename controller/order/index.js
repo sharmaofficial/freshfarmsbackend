@@ -2,12 +2,12 @@ const inventory = require("../../modal/inventory")
 const inventoryLog = require("../../modal/inventoryLog")
 const ordersSchema = require("../../modal/order");
 const userSchema = require("../../modal/user");
-const { getUniqueId,adminInstance } = require("../../utils");
+const { getUniqueId,adminInstance, sendOrderEmail } = require("../../utils");
 const crypto = require('crypto');
 
 const { Cashfree } = require("cashfree-pg");
 const { ObjectId } = require("mongodb");
-const { databases } = require("../../database");
+const { databases, users } = require("../../database");
 const { ID, Query } = require("node-appwrite");
 const Razorpay = require("razorpay");
 
@@ -268,6 +268,9 @@ exports.verifyOrder = async(req, res, next) => {
                     },
                     token: userDetails.documents[0]?.fcmToken,
                 });
+                const user = await users.get(order.documents[0].userId);
+                console.log("user", user.email);
+                sendOrderEmail(user.email, order.documents[0].$id);
             }
             res.send({status: 1, message:'Orders placed successfully', data: order.documents[0].orderId})
         }else{

@@ -8,6 +8,7 @@ const { ObjectId } = require('mongodb');
 const { account, users, databases, appwriteSDK, messaging, storage } = require('../../database');
 const { ID, Query, InputFile, ImageGravity, ImageFormat } = require('node-appwrite');
 const user = require('../../modal/user');
+const CryptoJS = require('crypto-js');
 
 let bucket = adminInstance.storage().bucket();
 
@@ -359,47 +360,21 @@ exports.addAddress = async (req, res, next) => {
 }
 
 exports.updateAddress = async (req, res, next) => {
-    const userId = req.userId;
-    const addressId = req.body.id;
+    try {
+        // const {userId} = req;
+        const {id: addressId, addresses} = req.body;
 
-    const existingUser = await userSchema.findById(userId);
+        const response = await databases.updateDocument(
+            process.env.dbId,
+            process.env.addressCollectID,
+            addressId,
+            addresses
+        );
 
-    if (!existingUser) {
-        return res.send({ status: 0, message: 'User not found' });
-    }
-
-    const existingAddresses = existingUser.data.addresses || [];
-
-    const updatedAddresses = existingAddresses.map((address) => {
-        if (address.id === addressId) {
-            return {
-                id: addressId,
-                ...req.body.addresses,
-            };
-        }
-        return address;
-    });
-
-    const update = {
-        $set: {
-            'data.addresses': updatedAddresses,
-        },
-    };
-
-    const options = {
-        new: true,
-    };
-
-    const updatedUser = await userSchema.findOneAndUpdate(
-        { _id: userId },
-        update,
-        options
-    );
-
-    if (updatedUser) {
-        res.send({ status: 1, data: updatedUser, message: 'User updated' });
-    } else {
-        res.send({ status: 0, data: [], message: 'Error in User update' });
+        console.log("response", response);
+        return res.send({status: 1, message: `Address updated successfully !!`, data: response});
+    } catch (error) {
+        return res.send({status: 0, message: `Address updation failed !! - ${error.message}`, data: null});
     }
 }
 
@@ -432,28 +407,20 @@ exports.markDefaultAddress = async (req, res, next) => {
 
 exports.deleteAddress = async (req, res) => {
     try {
-        const userId = req.userId;
-        const addressId = req.body.id;
+        // const {userId} = req;
+        const {id: addressId} = req.body;
 
-        const updatedUser = await userSchema.findOneAndUpdate(
-            { _id: userId },
+        await databases.updateDocument(
+            process.env.dbId,
+            process.env.addressCollectID,
+            addressId,
             {
-                $pull: {
-                    'data.addresses': { id: addressId },
-                },
-            },
-            { new: true }
+                isActive: false
+            }
         );
-        await updatedUser.save();
-        // Check if addresses array is empty, assign to empty array
-        if (updatedUser) {
-            res.json({ status: 1, data: updatedUser, message: 'Address deleted successfully' });
-        } else {
-            res.json({ status: 0, data: [], message: 'Error in deleting address' });
-        }
+        return res.send({status: 1, message: `Address deleted successfully !!`, data: null});
     } catch (error) {
-        console.error('Error:', error);
-        res.json({ status: 0, data: [], message: error.message });
+        return res.send({status: 0, message: `Address deletion failed !! - ${error.message}`, data: null});
     }
 };
 
@@ -871,7 +838,6 @@ exports.loginWithAppWrite = async(req, res, next) => {
 
 exports.verifyOtpWithAppWrite = async(req, res, next) => {
     try {
-        console.log(req.body);
         const {userId, otp, fcmToken} = req.body;
         if(userId && otp){
             const response = await databases.listDocuments(
@@ -908,7 +874,8 @@ exports.verifyOtpWithAppWrite = async(req, res, next) => {
                         token: fcmToken,
                     });
                 }
-                return res.send({ status: 1, message: `Login success`, data:  {...response, ...user, ...profile.documents[0], token: token}})
+                const encryptedData = CryptoJS.AES.encrypt(JSON.stringify({...response, ...user, ...profile.documents[0], token: token}), 'freshfarms').toString();
+                return res.send({ status: 1, message: `Login success`, data: encryptedData})
             }else{
                 return res.send({ status: 0, message: `Incorrect OTP`, data: null })
             }
@@ -937,7 +904,8 @@ exports.getAddresses = async(req, res, next) => {
                 process.env.dbId,
                 process.env.addressCollectID,
                 [
-                    Query.equal("user", [tokenId])
+                    Query.equal("user", [tokenId]),
+                    Query.equal("isActive", true)
                 ]
             );
             if(addresses.total){
@@ -947,6 +915,7 @@ exports.getAddresses = async(req, res, next) => {
             }
         }
     } catch (error) {
+        console.log("error",error);
         res.send({ status: 0, message: `Something went wrong - ${error.message}`, data: null})
     }
 }

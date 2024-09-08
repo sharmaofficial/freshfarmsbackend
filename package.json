@@ -13,6 +13,7 @@
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.0",
     "cashfree-pg": "^3.2.7",
+    "crypto-js": "^4.2.0",
     "dotenv": "^16.0.1",
     "express": "^4.17.1",
     "express-fileupload": "^1.4.0",
@@ -29,6 +30,7 @@
     "nodemailer": "^6.9.8",
     "razorpay": "^2.9.4",
     "salted-md5": "^4.0.5",
+    "sjcl": "^1.0.8",
     "transloadit": "^3.0.2",
     "uuid": "^9.0.1",
     "validator": "^13.5.2"
