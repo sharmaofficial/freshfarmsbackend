@@ -1,12 +1,15 @@
-const inventoryLogSchema = require('../../modal/inventoryLog');
+const { databases } = require('../../database');
 
 exports.getInventoryLog = async(req, res, next) => {
     try {
-        const response = await inventoryLogSchema.find({});
-        if(response){
-            res.send({status: 1, messsage: `Invetory log fetched`, data: response});
+        const response = await databases.listDocuments(
+            process.env.dbId,
+            process.env.inventoryLogCollectID,
+        );
+        if(response.total){
+            return res.send({status: 1, message: `category fetched successfully`, data: response})
         }else{
-            res.send({status: 0, messsage: `No invetory log found`, data: null});
+            return res.send({status: 0, message: `No categories found`, data: []})
         }
     } catch (error) {
         res.send({status: 0, messsage: `Error while fetching Invetory log - ${error}`, data: null});

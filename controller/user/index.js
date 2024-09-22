@@ -752,21 +752,7 @@ exports.updateUserStatusAdmin = async (req, res, next) => {
         console.log(req.body);
         const {userId, isActive} = req.body;
         await users.updateStatus(userId, isActive);
-        // const update = {
-        //     $set: {
-        //         'data.isActive': req.body.isActive,
-        //     },
-        // };
-    
-        // const options = {
-        //     returnOriginal: false
-        // };
-        // const response = await userSchema.findOneAndUpdate({ _id: ObjectId(userId) }, update, options);
-        // if (response) {
-        //     res.send({ status: 1, data: response, message: 'User updated' })
-        // } else {
-        //     res.send({ status: 0, message: 'User not found' })
-        // }
+        res.send({ status: 1, data: null, message: 'User updated' })
     } catch (error) {
         console.log("error", error);
         res.send({ message: error.message })

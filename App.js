@@ -7,7 +7,6 @@ const result = dotenv.config({path: './.env'});
 if (result.error) {
   throw result.error;
 }
-const url = `mongodb+srv://${process.env.dbUsername}:${process.env.dbPassword}${process.env.dbURL}?retryWrites=true&w=majority`
 const app = express();
 
 const port = process.env.PORT || 8080
@@ -31,7 +30,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const excludePaths = ['/register', '/login', '/admin/login', '/verifyPaymentHook', '/admin/login', '/forgotPassword', '/verifyOTP', '/updatePasswordWithoutAuth','/verifyOtpWithAppWrite'];
+const excludePaths = ['/register', '/login', '/admin/login', '/verifyPaymentHook', '/admin/login', '/forgotPassword', '/verifyOTP', '/updatePasswordWithoutAuth','/verifyOtpWithAppWrite', '/admin/addCategory'];
 app.use(verifyToken(excludePaths));
 app.use(Routes.getRouter, Routes.postRouter);
 

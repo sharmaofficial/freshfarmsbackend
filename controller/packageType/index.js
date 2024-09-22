@@ -2,6 +2,7 @@ const inventory = require("../../modal/inventory");
 const packageTypeSchema = require("../../modal/packageType");
 const { databases } = require("../../database");
 const { getUniqueId } = require("../../utils");
+const { ID } = require("node-appwrite");
 
 exports.getPackages = async(req, res, next) => {
     try {
@@ -45,22 +46,32 @@ exports.getPackageByProductId = async(req, res, next) => {
 exports.addPackage = async(req, res, next) => {
     try {
         if(req.body.name){
-            let payload = {
-                name: req.body.name,
-                isActive: false
-            }
-            const response = await packageTypeSchema.create({...payload});
-            if(response){
-                res.send({status: 1, message: 'Package created successfully !', data: response});
-            }else{
-                res.send({status: 1, message: 'Package creation failed !', data: null});
+            const name = Number(req.body.name);
+            console.log("name", typeof name);
+
+            if(typeof name !== 'number' && typeof name !== NaN){
+                return res.send({status: 0, message: 'Name should be a number', data: null});
+            } else {                
+                let payload = {
+                    name: name,
+                    isActive: false,
+                    updateAt: new Date(),
+                };
+                console.log("payload", payload);
+                const response = await databases.createDocument(
+                    process.env.dbId,
+                    process.env.packageCollectID,
+                    ID.unique(),
+                    payload
+                )
+                return res.send({status: 1, message:'Packages created successfully', data: response.$id});
             }
         }else{
-            res.send({status: 1, message: 'Please send required fields !', data: null});
+            return res.send({status: 0, message: 'Please send required fields !', data: null});
         }
 
     } catch (error) {
-        res.send({status: 0, message: `Package creation failed ! - ${error}`, data: null});
+       return res.send({status: 0, message: `Package creation failed ! - ${error}`, data: null});
     }
 }
 
