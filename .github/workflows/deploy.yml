@@ -56,7 +56,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    steps:
+        steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -66,11 +66,38 @@ jobs:
         ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
 
     - name: Deploy code to VPS
+      env:
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SERVER_USER: root
+        ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
       run: |
-        ssh -o StrictHostKeyChecking=no root@146.190.11.0 << 'EOF'
+        if ! command -v sshpass &> /dev/null; then
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+        fi
+        sshpass -p "$ROOT_PASSWORD" ssh -o StrictHostKeyChecking=no root@$SERVER_IP << 'EOF'
           cd freshfarmsbackend || exit
           git pull origin dev
           yarn install
           pm2 restart App
           exit
         EOF
+
+    # steps:
+    # - name: Checkout code
+    #   uses: actions/checkout@v3
+
+    # - name: Install SSH key
+    #   uses: webfactory/ssh-agent@v0.7.0
+    #   with:
+    #     ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
+
+    # - name: Deploy code to VPS
+    #   run: |
+    #     ssh -o StrictHostKeyChecking=no root@146.190.11.0 << 'EOF'
+    #       cd freshfarmsbackend || exit
+    #       git pull origin dev
+    #       yarn install
+    #       pm2 restart App
+    #       exit
+    #     EOF
