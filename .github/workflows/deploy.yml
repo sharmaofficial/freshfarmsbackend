@@ -1,52 +1,4 @@
-# name: Deploy to VPS
-
-# on:
-#   push:
-#     branches:
-#       - dev
-
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v3  # Updated to v3 to use Node.js 20
-
-#     - name: Install SSH key
-#       uses: webfactory/ssh-agent@v0.7.0
-#       with:
-#         ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
-
-#     - name: Deploy code to VPS
-#       run: |
-#         ssh root@146.190.11.0 'cd /freshfarmsbackend && git pull origin dev && yarn && pm2 restart all'
-
-# name: Debug SSH Connection
-
-# on:
-#   push:
-#     branches:
-#       - dev
-
-# jobs:
-#   debug-ssh:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v3
-
-#     - name: Install SSH key
-#       uses: webfactory/ssh-agent@v0.7.0
-#       with:
-#         ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
-
-#     - name: Test SSH connection with verbose output
-#       run: ssh -vvv -o StrictHostKeyChecking=no root@146.190.11.0 'echo "SSH connection successful!"'
-
 name: Deploy to VPS
-
 on:
   push:
     branches:
@@ -82,22 +34,3 @@ jobs:
           pm2 restart App
           exit
         EOF
-
-    # steps:
-    # - name: Checkout code
-    #   uses: actions/checkout@v3
-
-    # - name: Install SSH key
-    #   uses: webfactory/ssh-agent@v0.7.0
-    #   with:
-    #     ssh-private-key: ${{ secrets.VPS_DEPLOY_KEY }}
-
-    # - name: Deploy code to VPS
-    #   run: |
-    #     ssh -o StrictHostKeyChecking=no root@146.190.11.0 << 'EOF'
-    #       cd freshfarmsbackend || exit
-    #       git pull origin dev
-    #       yarn install
-    #       pm2 restart App
-    #       exit
-    #     EOF
