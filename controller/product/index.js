@@ -167,13 +167,13 @@ exports.addProduct = async(req, res, next) => {
             async(url) => {
                 payload.image = url;
                 // const response = await productSchema.create({...payload});
-                const response  = databases.createDocument(
+                const response  = await databases.createDocument(
                     process.env.dbId,
                     process.env.productsCollectID,
                     ID.unique(),
                     payload,
                 )
-                return res.send({status: 1, message: "Product Created Successfully !!", data: response})
+                return res.send({status: 1, message: "Product Created Successfully !!", data: response.$id})
             },
             (error) => {
                 return res.send({status: 0, message: error, data: null})
