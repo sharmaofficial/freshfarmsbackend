@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 const productSchema = require("../../modal/product");
 const { adminInstance, getUniqueId } = require("../../utils");
 const { databases } = require('../../database');
-const { Query } = require('node-appwrite');
+const { Query, ID } = require('node-appwrite');
 
 let bucket = adminInstance.storage().bucket();
 
@@ -152,28 +152,35 @@ exports.getProduct = async(req, res, next) => {
 
 exports.addProduct = async(req, res, next) => {
     let payload = {
+        associated_shop: req.body.shopName,
         name: req.body.name,
-        categoryId: req.body.categoryId,
         description: req.body.description,
         estimated_delivery: req.body.estimated_delivery,
-        shopName: req.body.shopName,
         isActive: false,
-        coverImage: ""
+        price: parseFloat(req.body.price),
+        category: req.body.categoryId,
+        image: ""
     }
     try {
         uploadImageToFirebaseAndReturnURL(
             req,
             async(url) => {
-                payload.coverImage = url;
-                const response = await productSchema.create({...payload});
-                res.send({status: 1, message: "Product Created Successfully !!", data: response})
+                payload.image = url;
+                // const response = await productSchema.create({...payload});
+                const response  = databases.createDocument(
+                    process.env.dbId,
+                    process.env.productsCollectID,
+                    ID.unique(),
+                    payload,
+                )
+                return res.send({status: 1, message: "Product Created Successfully !!", data: response})
             },
             (error) => {
-                res.send({status: 0, message: error, data: null})
+                return res.send({status: 0, message: error, data: null})
             }
         )
     } catch (error) {
-        res.send({status: 0, message: error, data: null})
+        return res.send({status: 0, message: error, data: null})
     }
 }
 
@@ -237,12 +244,20 @@ exports.editProduct = async(req, res, next) => {
 }
 
 exports.deleteProduct = async(req, res, next) => {
-    console.log("req.body._id", req.body._id);
-    const response = await productSchema.deleteOne({_id: req.body._id});
-    if(response){
-        res.send({status: 1, message: `Product Deleted Successfully !!`, data: response});
-    }else{
-        res.send({status: 0, message: "Product not found !!", data: null});
+    try {
+        const {id} = req.body;
+        if(id){            
+            const response = await databases.deleteDocument(
+                process.env.dbId,
+                process.env.productsCollectID,
+                id
+            )
+            return res.send({status: 1, message: "Product deleted successfully !!", data: response});
+        } else {
+            return res.send({status: 0, message: "Please send product Id !!", data: null});
+        }
+    } catch (error) {
+       return res.send({status: 0, message: "Product not found !!", data: null});
     }
 }
 
