@@ -1,7 +1,7 @@
 const { Query, ID } = require("node-appwrite");
 const { databases } = require("../../database");
 const categoriySchema = require("../../modal/categories")
-const { adminInstance, getUniqueId } = require("../../utils");
+const { adminInstance, getUniqueId, uploadFileToBucket } = require("../../utils");
 
 let bucket = adminInstance.storage().bucket();
 
@@ -44,30 +44,18 @@ exports.addCategory = async(req, res, next) => {
     let payload = {
         name: req.body.name,
         isActive: false,
+        image: ""
     }
     try {
-        uploadImageToFirebaseAndReturnURL(
-            req,
-            async(url) => {
-                try {
-                    
-                    payload.Image = url;
-                    const response = await databases.createDocument(
-                        process.env.dbId,
-                        process.env.categoriesCollectID,
-                        ID.unique(),
-                        payload
-                    )
-                    // const response = await categoriySchema.create({...payload});
-                    return res.send({status: 1, message: "Category Created Successfully !!", data: response.$id})
-                } catch (error) {
-                    return res.send({status: 0, message: error, data: null})
-                }
-            },
-            (error) => {
-                return res.send({status: 0, message: error, data: null})
-            }
-        )
+        const fileURL = await uploadFileToBucket(req.file);
+        payload.image = fileURL;
+        const response = await databases.createDocument(
+            process.env.dbId,
+            process.env.categoriesCollectID,
+            ID.unique(),
+            payload
+        );
+        return res.send({status: 1, message: "Category Created Successfully !!", data: response.$id});
     } catch (error) {
         return res.send({status: 0, message: error, data: null})
     }

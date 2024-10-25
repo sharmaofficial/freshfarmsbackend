@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 const productSchema = require("../../modal/product");
-const { adminInstance, getUniqueId } = require("../../utils");
+const { adminInstance, getUniqueId, uploadFileToBucket } = require("../../utils");
 const { databases } = require('../../database');
 const { Query, ID } = require('node-appwrite');
 
@@ -152,33 +152,26 @@ exports.getProduct = async(req, res, next) => {
 
 exports.addProduct = async(req, res, next) => {
     let payload = {
-        associated_shop: req.body.shopName,
         name: req.body.name,
         description: req.body.description,
+        image: req.file,
+        category: req.body.categoryId,
         estimated_delivery: req.body.estimated_delivery,
         isActive: false,
         price: parseFloat(req.body.price),
-        category: req.body.categoryId,
-        image: ""
+        associated_shop: "66c9a7ee003b7882be2c",
+        productType: "66c9a86d001f504c1886"
     }
     try {
-        uploadImageToFirebaseAndReturnURL(
-            req,
-            async(url) => {
-                payload.image = url;
-                // const response = await productSchema.create({...payload});
-                const response  = await databases.createDocument(
-                    process.env.dbId,
-                    process.env.productsCollectID,
-                    ID.unique(),
-                    payload,
-                )
-                return res.send({status: 1, message: "Product Created Successfully !!", data: response.$id})
-            },
-            (error) => {
-                return res.send({status: 0, message: error, data: null})
-            }
-        )
+        const fileURL = await uploadFileToBucket(req.file);
+        payload.image = fileURL
+        const response  = await databases.createDocument(
+                            process.env.dbId,
+                            process.env.productsCollectID,
+                            ID.unique(),
+                            payload,
+                        );
+        return res.send({status: 1, message: "Product Created Successfully !!", data: response.$id})
     } catch (error) {
         return res.send({status: 0, message: error, data: null})
     }
@@ -263,20 +256,20 @@ exports.deleteProduct = async(req, res, next) => {
 
 function uploadImageToFirebaseAndReturnURL(req, successCallback, errorCallback){
     try {
-        const buffer = Buffer.from(req.body.coverImage, 'base64');
-        const fileName = `${req.body.name}_${req.userId}${getUniqueId()}` + getExtensionFromMimeType(req.body.image.type);
-        console.log("fileName", fileName);
-        console.log("buffer", buffer);
-        const file = bucket.file(fileName);
-        file.createWriteStream().end(buffer)
-        file.getSignedUrl({ action: 'read', expires: '03-09-2055' })
-        .then((url) => {
-            console.log('Image URL:', url);
-            successCallback(url[0]);
-        })
-        .catch((error) => {
-            console.error('Error getting signed URL:', error);
-        });
+        // const buffer = Buffer.from(req.body.coverImage, 'base64');
+        // const fileName = `${req.body.name}_${req.userId}${getUniqueId()}` + getExtensionFromMimeType(req.body.image.type);
+        // console.log("fileName", fileName);
+        // console.log("buffer", buffer);
+        // const file = bucket.file(fileName);
+        // file.createWriteStream().end(buffer)
+        // file.getSignedUrl({ action: 'read', expires: '03-09-2055' })
+        // .then((url) => {
+        //     console.log('Image URL:', url);
+        //     successCallback(url[0]);
+        // })
+        // .catch((error) => {
+        //     console.error('Error getting signed URL:', error);
+        // });
     } catch (error) {
         console.log("error", error);
         errorCallback(error);

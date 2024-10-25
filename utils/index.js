@@ -15,6 +15,8 @@ const adminInstance = admin.initializeApp({
 
 const fs = require('fs');
 const path = require('path');
+const { storage, client } = require('../database');
+const { ID, Permission, Role, InputFile } = require('node-appwrite');
 
 /**
  * Convert a Base64 string to a file and save it to the filesystem.
@@ -82,5 +84,39 @@ function sendOrderEmail(email, orderId){
     }
   });
 };
+
+async function uploadFileToBucket(fileBuffer) {
+  try {
+    const fileName = `picture_${fileBuffer.originalname}_${ID.unique()}` + getExtensionFromMimeType(fileBuffer.mimetype); // Replace with your desired file path and name
+    const result = InputFile.fromBuffer(fileBuffer.buffer, fileName);
+    // Upload the file to the specified bucket
+    const file = await storage.createFile(process.env.bucketID, ID.unique(), result);
+    // Construct the file URL
+    const fileUrl = `${process.env.endpoint}/storage/buckets/${process.env.bucketID}/files/${file.$id}/view?project=${process.env.projectID}&mode=admin`;
+    return fileUrl;
+  } catch (error) {
+    console.error("Error uploading file to bucket:", error);
+    throw error;
+  }
+}
+
+function getExtensionFromMimeType(mimeType) {
+  const mimeMap = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+  };
+
+  // Convert to lowercase to handle case-insensitivity
+  const lowerCaseMimeType = mimeType.toLowerCase();
+
+  // Check if the mimeType is in the map
+  if (mimeMap.hasOwnProperty(lowerCaseMimeType)) {
+    return mimeMap[lowerCaseMimeType];
+  }
+
+  // If the mimeType is not found in the map, you may handle it accordingly (return a default extension or null)
+  return '.jpg';
+}
   
-module.exports = {adminInstance, getUniqueId, base64ToFile, sendOrderEmail};
+module.exports = {adminInstance, getUniqueId, base64ToFile, sendOrderEmail, uploadFileToBucket};

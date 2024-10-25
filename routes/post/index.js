@@ -7,7 +7,8 @@ const { createOrder, verifyOrder, verifyPaymentHook, getOrderStatus, updateOrder
 const { getLatestQuantityFromPackage, updateStock, updateProductPackageStatus } = require('../../controller/inventory');
 const { addCategory, editCategory, deleteCategory } = require('../../controller/category');
 const { addPackage, editPackage, getPackageByProductId } = require('../../controller/packageType');
-
+const multer = require("multer");
+const upload = multer();
 router.post('/createOrder', createOrder);
 router.post('/verifyOrder', verifyOrder);
 router.post('/add', add);
@@ -41,7 +42,7 @@ router.post('/calculateDeliveryCharges', calculateDeliveryCharges);
 
 //admin
 router.post('/admin/login', adminLogin);
-router.post('/admin/addProduct', addProduct);
+router.post('/admin/addProduct', upload.single("image"), addProduct);
 router.post('/admin/addCategory', addCategory);
 router.post('/admin/editCategory', editCategory);
 router.post('/admin/deleteCategory', deleteCategory);
