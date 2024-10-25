@@ -43,8 +43,8 @@ router.post('/calculateDeliveryCharges', calculateDeliveryCharges);
 //admin
 router.post('/admin/login', adminLogin);
 router.post('/admin/addProduct', upload.single("image"), addProduct);
-router.post('/admin/addCategory', addCategory);
-router.post('/admin/editCategory', editCategory);
+router.post('/admin/addCategory', upload.single("image"), addCategory);
+router.post('/admin/editCategory', upload.single("image"), editCategory);
 router.post('/admin/deleteCategory', deleteCategory);
 router.post('/admin/editProduct', editProduct);
 router.post('/admin/updateOrderStatus', updateOrderStatus);

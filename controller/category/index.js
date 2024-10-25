@@ -2,6 +2,7 @@ const { Query, ID } = require("node-appwrite");
 const { databases } = require("../../database");
 const categoriySchema = require("../../modal/categories")
 const { adminInstance, getUniqueId, uploadFileToBucket } = require("../../utils");
+const { string } = require("joi");
 
 let bucket = adminInstance.storage().bucket();
 
@@ -62,70 +63,104 @@ exports.addCategory = async(req, res, next) => {
 }
 
 exports.editCategory = async(req, res, next) => {
-    if(req.body.coverImage){
-        let data = {...req.body};
-        delete data._id;
-        try {
-            uploadImageToFirebaseAndReturnURL(
-                req,
-                async(url) => {
-                    const update = {
-                        $set: {
-                            ...data,
-                            coverImage: url
-                        },
-                    };
-                    const options = {
-                        new: true,
-                    };
-                    const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
-                    if(response){
-                        res.send({status: 1, message: "Category Updated Successfully !!", data: response});
-                    }else{
-                        res.send({status: 0, message: "Category Updated Failed !!", data: null});
-                    }
-                },
-                (error) => {
-                    res.send({status: 0, message: error, data: null})
-                }
-            )
-        } catch (error) {
-            res.send({status: 0, message: error, data: null})
+    try {
+        const {id, name, isActive} = req.body;
+        let payload = {};
+        if(!id){
+            return res.send({status: 0, message: 'Please send category id which needs to be edit', data: null});
+        } 
+        if(name || name instanceof String){
+            payload.name = name;
         }
-    }else{
-        try {
-            let data = {...req.body};
-            delete data._id;
-            delete data.coverImage;
-    
-            const update = {
-                $set: {
-                    ...data,
-                },
-            };
-            const options = {
-                new: true,
-            };
-            const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
-            if(response){
-                res.send({status: 1, message: `Category ${response.name} Updated Successfully !!`, data: response});
-            }else{
-                res.send({status: 0, message: "Category not found !!", data: null});
-            } 
-        } catch (error) {   
-            console.log(error);
-            res.send({status: 0, message: `Product Updated Failed !! - ${error.message}`, data: null});         
+        if(isActive instanceof Boolean){
+            payload.isActive = isActive;
         }
+        if(req.file){
+           const fileURL = await uploadFileToBucket(req.file);
+           payload.Image = fileURL;
+        }
+        const response = await databases.updateDocument(
+            process.env.dbId,
+            process.env.categoriesCollectID,
+            id,
+            payload
+        );
+        return res.send({status: 1, message: 'Edit Successfull', data: response.$id});
+    } catch (error) {
+        return res.send({status: 0, message: error, data: null});
     }
+    // if(req.body.coverImage){
+    //     let data = {...req.body};
+    //     delete data._id;
+    //     try {
+    //         uploadImageToFirebaseAndReturnURL(
+    //             req,
+    //             async(url) => {
+    //                 const update = {
+    //                     $set: {
+    //                         ...data,
+    //                         coverImage: url
+    //                     },
+    //                 };
+    //                 const options = {
+    //                     new: true,
+    //                 };
+    //                 const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
+    //                 if(response){
+    //                     res.send({status: 1, message: "Category Updated Successfully !!", data: response});
+    //                 }else{
+    //                     res.send({status: 0, message: "Category Updated Failed !!", data: null});
+    //                 }
+    //             },
+    //             (error) => {
+    //                 res.send({status: 0, message: error, data: null})
+    //             }
+    //         )
+    //     } catch (error) {
+    //         res.send({status: 0, message: error, data: null})
+    //     }
+    // }else{
+    //     try {
+    //         let data = {...req.body};
+    //         delete data._id;
+    //         delete data.coverImage;
+    
+    //         const update = {
+    //             $set: {
+    //                 ...data,
+    //             },
+    //         };
+    //         const options = {
+    //             new: true,
+    //         };
+    //         const response = await categoriySchema.findOneAndUpdate({_id: req.body._id}, update, options);
+    //         if(response){
+    //             res.send({status: 1, message: `Category ${response.name} Updated Successfully !!`, data: response});
+    //         }else{
+    //             res.send({status: 0, message: "Category not found !!", data: null});
+    //         } 
+    //     } catch (error) {   
+    //         console.log(error);
+    //         res.send({status: 0, message: `Product Updated Failed !! - ${error.message}`, data: null});         
+    //     }
+    // }
 }
 
 exports.deleteCategory = async(req, res, next) => {
-    console.log("req.body._id", req.body._id);
-    const response = await categoriySchema.deleteOne({_id: req.body._id});
-    if(response){
-        res.send({status: 1, message: `Category Deleted Successfully !!`, data: response});
-    }else{
-        res.send({status: 0, message: "Category not found !!", data: null});
+    try {
+        console.log("req.body", req);
+        const {id} = req.body;
+        if(!id){
+            return res.send({status: 0, message: 'Please send category id which needs to be delete', data: null});
+        }
+        const response = await databases.deleteDocument(
+            process.env.dbId,
+            process.env.categoriesCollectID,
+            id,
+        );
+        return res.send({status: 1, message: 'Delete Successfull', data: response.$id});
+    } catch (error) {
+        return res.send({status: 0, message: error, data: null});
     }
 }
 
