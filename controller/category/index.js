@@ -148,7 +148,6 @@ exports.editCategory = async(req, res, next) => {
 
 exports.deleteCategory = async(req, res, next) => {
     try {
-        console.log("req.body", req);
         const {id} = req.body;
         if(!id){
             return res.send({status: 0, message: 'Please send category id which needs to be delete', data: null});

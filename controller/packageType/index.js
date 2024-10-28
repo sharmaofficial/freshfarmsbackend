@@ -2,13 +2,16 @@ const inventory = require("../../modal/inventory");
 const packageTypeSchema = require("../../modal/packageType");
 const { databases } = require("../../database");
 const { getUniqueId } = require("../../utils");
-const { ID } = require("node-appwrite");
+const { ID, Query } = require("node-appwrite");
 
 exports.getPackages = async(req, res, next) => {
     try {
         const packages = await databases.listDocuments(
             process.env.dbId,
             process.env.packageCollectID,
+            [
+                Query.limit(1000),
+            ]
         )
         if(packages.total){
             return res.send({status: 1, message:'Packages list fetched', data: packages.documents});

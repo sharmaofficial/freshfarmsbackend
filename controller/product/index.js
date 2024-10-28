@@ -17,7 +17,8 @@ exports.getProducts = async(req, res, next) => {
                 process.env.productsCollectID,
                 [
                     Query.equal('category', [categoryId]),
-                    Query.equal('isActive', [true])
+                    Query.equal('isActive', [true]),
+                    Query.limit(1000),
                 ]
             );
             if(products.total){
@@ -151,6 +152,8 @@ exports.getProduct = async(req, res, next) => {
 }
 
 exports.addProduct = async(req, res, next) => {
+    console.log("req.body", req.body);
+
     let payload = {
         name: req.body.name,
         description: req.body.description,
@@ -173,6 +176,7 @@ exports.addProduct = async(req, res, next) => {
                         );
         return res.send({status: 1, message: "Product Created Successfully !!", data: response.$id})
     } catch (error) {
+        console.log("error", error);
         return res.send({status: 0, message: error, data: null})
     }
 }
