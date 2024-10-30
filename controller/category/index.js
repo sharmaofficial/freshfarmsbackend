@@ -45,11 +45,11 @@ exports.addCategory = async(req, res, next) => {
     let payload = {
         name: req.body.name,
         isActive: false,
-        image: ""
+        Image: ""
     }
     try {
         const fileURL = await uploadFileToBucket(req.file);
-        payload.image = fileURL;
+        payload.Image = fileURL;
         const response = await databases.createDocument(
             process.env.dbId,
             process.env.categoriesCollectID,
